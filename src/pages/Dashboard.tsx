@@ -9,7 +9,8 @@ import {
   CreditCard, 
   TrendingUp,
   Plus,
-  LogOut
+  LogOut,
+  FolderKanban
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -208,6 +209,16 @@ const Dashboard = () => {
             </div>
             
             <div className="flex gap-3">
+              <Button 
+                variant="outline" 
+                size="lg" 
+                className="gap-2 text-primary-foreground border-primary-foreground/30 hover:bg-primary-foreground/20"
+                onClick={() => navigate("/categories")}
+              >
+                <FolderKanban className="w-5 h-5" />
+                Categorias
+              </Button>
+              
               <Button 
                 variant="success" 
                 size="lg" 
