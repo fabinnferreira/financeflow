@@ -14,6 +14,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { TransactionDialog } from "@/components/TransactionDialog";
 
 interface Transaction {
   id: number;
@@ -42,6 +43,7 @@ const Dashboard = () => {
   const [expenses, setExpenses] = useState(0);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
   const [categoryTotals, setCategoryTotals] = useState<CategoryTotal[]>([]);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -206,7 +208,12 @@ const Dashboard = () => {
             </div>
             
             <div className="flex gap-3">
-              <Button variant="success" size="lg" className="gap-2">
+              <Button 
+                variant="success" 
+                size="lg" 
+                className="gap-2"
+                onClick={() => setDialogOpen(true)}
+              >
                 <Plus className="w-5 h-5" />
                 Nova Transação
               </Button>
@@ -390,6 +397,12 @@ const Dashboard = () => {
           </Card>
         </div>
       </div>
+
+      <TransactionDialog 
+        open={dialogOpen} 
+        onOpenChange={setDialogOpen}
+        onSuccess={loadDashboardData}
+      />
     </div>
   );
 };
