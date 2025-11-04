@@ -7,6 +7,7 @@ import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
 import Categories from "./pages/Categories";
 import Accounts from "./pages/Accounts";
+import Transactions from "./pages/Transactions";
 import AuthPage from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -43,6 +44,14 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <Accounts />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/transactions" 
+            element={
+              <ProtectedRoute>
+                <Transactions />
               </ProtectedRoute>
             } 
           />

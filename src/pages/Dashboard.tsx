@@ -189,6 +189,11 @@ const Dashboard = () => {
             </div>
             
             <div className="flex gap-3 bg-transparent rounded-lg">
+              <Button variant="outline" size="lg" onClick={() => navigate("/transactions")} className="gap-2 border-primary-foreground/30 hover:bg-primary-foreground/20 text-[#17ab4e] font-extralight">
+                <CreditCard className="w-5 h-5" />
+                Transações
+              </Button>
+              
               <Button variant="outline" size="lg" onClick={() => navigate("/categories")} className="gap-2 border-primary-foreground/30 hover:bg-primary-foreground/20 text-[#17ab4e] font-extralight">
                 <FolderKanban className="w-5 h-5" />
                 Categorias
