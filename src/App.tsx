@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
 import Categories from "./pages/Categories";
+import Accounts from "./pages/Accounts";
 import AuthPage from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -34,6 +35,14 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <Categories />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/accounts" 
+            element={
+              <ProtectedRoute>
+                <Accounts />
               </ProtectedRoute>
             } 
           />

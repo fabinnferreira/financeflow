@@ -220,6 +220,16 @@ const Dashboard = () => {
               </Button>
               
               <Button 
+                variant="outline" 
+                size="lg" 
+                className="gap-2 text-primary-foreground border-primary-foreground/30 hover:bg-primary-foreground/20"
+                onClick={() => navigate("/accounts")}
+              >
+                <Wallet className="w-5 h-5" />
+                Contas
+              </Button>
+              
+              <Button 
                 variant="success" 
                 size="lg" 
                 className="gap-2"
