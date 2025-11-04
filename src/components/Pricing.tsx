@@ -113,7 +113,7 @@ const Pricing = () => {
                   className="w-full"
                   asChild
                 >
-                  <Link to="/dashboard">
+                  <Link to="/auth">
                     {plan.cta}
                   </Link>
                 </Button>
