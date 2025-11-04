@@ -7,6 +7,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { TransactionDialog } from "@/components/TransactionDialog";
+import { PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
+import { ChartContainer, ChartTooltipContent, ChartLegend, ChartLegendContent, ChartConfig } from "@/components/ui/chart";
+import { startOfMonth, endOfMonth } from "date-fns";
 interface Transaction {
   id: number;
   description: string;
@@ -19,10 +22,12 @@ interface Transaction {
   };
 }
 interface CategoryTotal {
+  category_id: number;
   name: string;
   emoji: string;
-  total: number;
-  percentage: number;
+  color: string;
+  total_amount_cents: number;
+  amount: number;
 }
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -63,6 +68,8 @@ const Dashboard = () => {
 
       // Get current month start and end dates
       const now = new Date();
+      const startDate = startOfMonth(now).toISOString();
+      const endDate = endOfMonth(now).toISOString();
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
       const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 
@@ -85,32 +92,32 @@ const Dashboard = () => {
       // Calculate totals
       let totalIncome = 0;
       let totalExpenses = 0;
-      const categoryMap = new Map<string, {
-        name: string;
-        emoji: string;
-        total: number;
-      }>();
       transactions?.forEach(transaction => {
         const amount = transaction.amount_cents / 100;
         if (transaction.type === "income") {
           totalIncome += amount;
         } else {
           totalExpenses += amount;
-
-          // Aggregate by category for expenses only
-          const catKey = transaction.categories.name;
-          if (!categoryMap.has(catKey)) {
-            categoryMap.set(catKey, {
-              name: transaction.categories.name,
-              emoji: transaction.categories.emoji,
-              total: 0
-            });
-          }
-          categoryMap.get(catKey)!.total += amount;
         }
       });
       setIncome(totalIncome);
       setExpenses(totalExpenses);
+
+      // Get category totals from RPC
+      const { data: categoryData, error: categoryError } = await supabase.rpc('get_category_totals' as any, {
+        start_date: startDate,
+        end_date: endDate
+      }) as any;
+      
+      if (categoryError) {
+        console.error("Error fetching category totals:", categoryError);
+      } else if (categoryData) {
+        const chartData = categoryData.map((item: any) => ({
+          ...item,
+          amount: item.total_amount_cents / 100,
+        }));
+        setCategoryTotals(chartData);
+      }
 
       // Get account balances
       const {
@@ -137,16 +144,6 @@ const Dashboard = () => {
         }
       })) || []);
 
-      // Calculate category percentages
-      const categoryArray = Array.from(categoryMap.values());
-      const categoriesWithPercentage = categoryArray.map(cat => ({
-        ...cat,
-        percentage: totalExpenses > 0 ? Math.round(cat.total / totalExpenses * 100) : 0
-      }));
-
-      // Sort by total and take top 4
-      categoriesWithPercentage.sort((a, b) => b.total - a.total);
-      setCategoryTotals(categoriesWithPercentage.slice(0, 4));
       setLoading(false);
     } catch (error: any) {
       console.error("Error loading dashboard:", error);
@@ -342,26 +339,28 @@ const Dashboard = () => {
               {categoryTotals.length === 0 ? <div className="text-center py-12">
                   <p className="text-muted-foreground">Nenhuma despesa registrada este mês</p>
                 </div> : <>
-                  <div className="space-y-6">
-                    {categoryTotals.map((category, index) => <div key={index} className="space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="font-medium flex items-center gap-2">
-                            <span>{category.emoji}</span>
-                            {category.name}
-                          </span>
-                          <span className="text-muted-foreground">
-                            R$ {category.total.toLocaleString('pt-BR', {
-                        minimumFractionDigits: 2
-                      })}
-                          </span>
-                        </div>
-                        <div className="relative h-3 bg-muted rounded-full overflow-hidden">
-                          <div className="absolute inset-y-0 left-0 bg-primary rounded-full transition-all duration-500" style={{
-                      width: `${category.percentage}%`
-                    }}></div>
-                        </div>
-                      </div>)}
-                  </div>
+                  <ChartContainer config={categoryTotals.reduce((acc, item) => {
+                    acc[item.name] = {
+                      label: `${item.emoji} ${item.name}`,
+                      color: item.color,
+                    };
+                    return acc;
+                  }, {} as ChartConfig)} className="h-[300px]">
+                    <PieChart>
+                      <Pie 
+                        data={categoryTotals} 
+                        dataKey="amount" 
+                        nameKey="name" 
+                        innerRadius={60}
+                      >
+                        {categoryTotals.map((item, index) => (
+                          <Cell key={`cell-${index}`} fill={item.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip content={<ChartTooltipContent hideLabel />} />
+                      <Legend content={<ChartLegendContent />} />
+                    </PieChart>
+                  </ChartContainer>
 
                   <div className="mt-6 p-4 bg-accent/50 rounded-lg">
                     <p className="text-sm text-muted-foreground mb-2">Total de Despesas</p>
