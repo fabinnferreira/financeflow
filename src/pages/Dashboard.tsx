@@ -166,9 +166,17 @@ const Dashboard = () => {
         </div>
       </div>;
   }
-  return <div className="min-h-screen bg-secondary/20">
-      {/* Header */}
-      <header className="bg-gradient-primary text-primary-foreground py-6 shadow-lg">
+  return <div className="min-h-screen bg-background">
+      {/* Floating Background */}
+      <div className="absolute inset-0 -z-10 overflow-hidden">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-float"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-success/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }}></div>
+      </div>
+
+      {/* Content */}
+      <div className="relative z-10">
+        {/* Header */}
+        <header className="bg-gradient-primary/80 backdrop-blur-xl text-primary-foreground py-6 shadow-lg">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between">
             <div>
@@ -359,7 +367,8 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <TransactionDialog open={dialogOpen} onOpenChange={setDialogOpen} onSuccess={loadDashboardData} />
+        <TransactionDialog open={dialogOpen} onOpenChange={setDialogOpen} onSuccess={loadDashboardData} />
+      </div>
     </div>;
 };
 export default Dashboard;
