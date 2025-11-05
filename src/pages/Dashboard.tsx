@@ -178,7 +178,7 @@ const Dashboard = () => {
         {/* Header */}
         <header className="backdrop-blur-lg text-primary-foreground py-6 shadow-lg rounded-xl bg-[#0000ff]/[0.78]">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between rounded-md bg-[#00085d]">
             <div>
               <h1 className="text-2xl font-bold">FinanceFlow</h1>
               <p className="text-sm text-primary-foreground/80">Olá, {userName}! 👋</p>
