@@ -7,20 +7,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { TransactionDialog } from "@/components/TransactionDialog";
-import { PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
+import { PieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 import { ChartContainer, ChartTooltipContent, ChartLegend, ChartLegendContent, ChartConfig } from "@/components/ui/chart";
 import { startOfMonth, endOfMonth } from "date-fns";
-interface Transaction {
-  id: number;
-  description: string;
-  amount_cents: number;
-  type: string;
-  date: string;
-  categories: {
-    name: string;
-    emoji: string;
-  };
-}
+
 interface CategoryTotal {
   category_id: number;
   name: string;
@@ -35,8 +25,8 @@ const Dashboard = () => {
   const [balance, setBalance] = useState(0);
   const [income, setIncome] = useState(0);
   const [expenses, setExpenses] = useState(0);
-  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
   const [categoryTotals, setCategoryTotals] = useState<CategoryTotal[]>([]);
+  const [dailyTotals, setDailyTotals] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const {
     toast
@@ -119,6 +109,23 @@ const Dashboard = () => {
         setCategoryTotals(chartData);
       }
 
+      // Get daily totals from RPC
+      const { data: dailyData, error: dailyError } = await supabase.rpc('get_daily_totals' as any, {
+        start_date: startDate,
+        end_date: endDate
+      }) as any;
+
+      if (dailyError) {
+        console.error("Error fetching daily totals:", dailyError);
+      } else if (dailyData) {
+        const dailyChartData = dailyData.map((item: any) => ({
+          ...item,
+          income: item.income / 100,
+          expense: item.expense / 100,
+        }));
+        setDailyTotals(dailyChartData);
+      }
+
       // Get account balances
       const {
         data: accounts,
@@ -127,22 +134,6 @@ const Dashboard = () => {
       if (accountsError) throw accountsError;
       const totalBalance = accounts?.reduce((sum, acc) => sum + acc.balance_cents, 0) || 0;
       setBalance(totalBalance / 100);
-
-      // Format recent transactions
-      setRecentTransactions(transactions?.slice(0, 5).map(t => ({
-        id: t.id,
-        description: t.description,
-        amount_cents: t.amount_cents,
-        type: t.type,
-        date: new Date(t.date).toLocaleDateString("pt-BR", {
-          day: "2-digit",
-          month: "short"
-        }),
-        categories: {
-          name: t.categories.name,
-          emoji: t.categories.emoji
-        }
-      })) || []);
 
       setLoading(false);
     } catch (error: any) {
@@ -281,46 +272,38 @@ const Dashboard = () => {
         </div>
 
         <div className="grid lg:grid-cols-2 gap-8">
-          {/* Recent Transactions */}
+          {/* Daily Movements */}
           <Card className="shadow-lg animate-slide-up">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <CreditCard className="w-5 h-5 text-primary" />
-                Transações Recentes
+                Movimentações Diárias
               </CardTitle>
-              <CardDescription>Suas últimas movimentações financeiras</CardDescription>
+              <CardDescription>Receitas e despesas nos últimos 30 dias</CardDescription>
             </CardHeader>
             <CardContent>
-              {recentTransactions.length === 0 ? <div className="text-center py-12">
-                  <p className="text-muted-foreground mb-4">Nenhuma transação ainda</p>
-                  <Button variant="outline" className="gap-2">
-                    <Plus className="w-4 h-4" />
-                    Adicionar primeira transação
-                  </Button>
-                </div> : <div className="space-y-4">
-                  {recentTransactions.map(transaction => <div key={transaction.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-accent/50 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${transaction.type === 'income' ? 'bg-success/10' : 'bg-destructive/10'}`}>
-                          {transaction.type === 'income' ? <ArrowUpRight className="w-5 h-5 text-success" /> : <ArrowDownRight className="w-5 h-5 text-destructive" />}
-                        </div>
-                        <div>
-                          <p className="font-medium">{transaction.description}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {transaction.categories.emoji} {transaction.categories.name}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className={`font-bold ${transaction.type === 'income' ? 'text-success' : 'text-destructive'}`}>
-                          {transaction.type === 'income' ? '+' : '-'}
-                          R$ {(Math.abs(transaction.amount_cents) / 100).toLocaleString('pt-BR', {
-                      minimumFractionDigits: 2
-                    })}
-                        </p>
-                        <p className="text-sm text-muted-foreground">{transaction.date}</p>
-                      </div>
-                    </div>)}
-                </div>}
+              {dailyTotals.length === 0 ? <div className="text-center py-12">
+                  <p className="text-muted-foreground">Nenhuma movimentação este mês</p>
+                </div> : <ChartContainer config={{
+                  income: {
+                    label: "Receitas",
+                    color: "hsl(var(--success))",
+                  },
+                  expense: {
+                    label: "Despesas",
+                    color: "hsl(var(--destructive))",
+                  },
+                } as ChartConfig} className="h-[300px]">
+                  <BarChart data={dailyTotals}>
+                    <CartesianGrid vertical={false} />
+                    <XAxis dataKey="date" tickLine={false} tickMargin={10} axisLine={false} />
+                    <YAxis tickLine={false} axisLine={false} />
+                    <Tooltip content={<ChartTooltipContent />} />
+                    <Legend content={<ChartLegendContent />} />
+                    <Bar dataKey="income" fill="var(--color-income)" radius={4} />
+                    <Bar dataKey="expense" fill="var(--color-expense)" radius={4} />
+                  </BarChart>
+                </ChartContainer>}
             </CardContent>
           </Card>
 
