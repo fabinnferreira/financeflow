@@ -12,7 +12,6 @@ import { ChartContainer, ChartTooltipContent, ChartLegend, ChartLegendContent, C
 import { startOfMonth, endOfMonth } from "date-fns";
 import DynamicBackground from "@/components/DynamicBackground";
 import { ThemeToggle } from "@/components/ThemeToggle";
-
 interface CategoryTotal {
   category_id: number;
   name: string;
@@ -96,34 +95,38 @@ const Dashboard = () => {
       setExpenses(totalExpenses);
 
       // Get category totals from RPC
-      const { data: categoryData, error: categoryError } = await supabase.rpc('get_category_totals' as any, {
+      const {
+        data: categoryData,
+        error: categoryError
+      } = (await supabase.rpc('get_category_totals' as any, {
         start_date: startDate,
         end_date: endDate
-      }) as any;
-      
+      })) as any;
       if (categoryError) {
         console.error("Error fetching category totals:", categoryError);
       } else if (categoryData) {
         const chartData = categoryData.map((item: any) => ({
           ...item,
-          amount: item.total_amount_cents / 100,
+          amount: item.total_amount_cents / 100
         }));
         setCategoryTotals(chartData);
       }
 
       // Get daily totals from RPC
-      const { data: dailyData, error: dailyError } = await supabase.rpc('get_daily_totals' as any, {
+      const {
+        data: dailyData,
+        error: dailyError
+      } = (await supabase.rpc('get_daily_totals' as any, {
         start_date: startDate,
         end_date: endDate
-      }) as any;
-
+      })) as any;
       if (dailyError) {
         console.error("Error fetching daily totals:", dailyError);
       } else if (dailyData) {
         const dailyChartData = dailyData.map((item: any) => ({
           ...item,
           income: item.income / 100,
-          expense: item.expense / 100,
+          expense: item.expense / 100
         }));
         setDailyTotals(dailyChartData);
       }
@@ -136,7 +139,6 @@ const Dashboard = () => {
       if (accountsError) throw accountsError;
       const totalBalance = accounts?.reduce((sum, acc) => sum + acc.balance_cents, 0) || 0;
       setBalance(totalBalance / 100);
-
       setLoading(false);
     } catch (error: any) {
       console.error("Error loading dashboard:", error);
@@ -174,7 +176,7 @@ const Dashboard = () => {
       {/* Content */}
       <div className="relative z-10">
         {/* Header */}
-        <header className="bg-primary/70 backdrop-blur-lg text-primary-foreground py-6 shadow-lg">
+        <header className="backdrop-blur-lg text-primary-foreground py-6 shadow-lg rounded-xl bg-[#0000ff]/[0.78]">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between">
             <div>
@@ -226,8 +228,8 @@ const Dashboard = () => {
             <CardContent>
               <div className="text-3xl font-bold text-primary">
                 R$ {balance.toLocaleString('pt-BR', {
-                minimumFractionDigits: 2
-              })}
+                  minimumFractionDigits: 2
+                })}
               </div>
               <p className="text-xs text-muted-foreground mt-2">
                 Atualizado agora
@@ -236,8 +238,8 @@ const Dashboard = () => {
           </Card>
 
           <Card className="bg-gradient-card border-2 border-success/20 shadow-lg animate-slide-up" style={{
-          animationDelay: '0.1s'
-        }}>
+            animationDelay: '0.1s'
+          }}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Receitas do Mês
@@ -247,8 +249,8 @@ const Dashboard = () => {
             <CardContent>
               <div className="text-3xl font-bold text-success">
                 R$ {income.toLocaleString('pt-BR', {
-                minimumFractionDigits: 2
-              })}
+                  minimumFractionDigits: 2
+                })}
               </div>
               <p className="text-xs text-success mt-2 flex items-center gap-1">
                 <TrendingUp className="w-3 h-3" />
@@ -258,8 +260,8 @@ const Dashboard = () => {
           </Card>
 
           <Card className="bg-gradient-card border-2 border-destructive/20 shadow-lg animate-slide-up" style={{
-          animationDelay: '0.2s'
-        }}>
+            animationDelay: '0.2s'
+          }}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Despesas do Mês
@@ -269,8 +271,8 @@ const Dashboard = () => {
             <CardContent>
               <div className="text-3xl font-bold text-destructive">
                 R$ {expenses.toLocaleString('pt-BR', {
-                minimumFractionDigits: 2
-              })}
+                  minimumFractionDigits: 2
+                })}
               </div>
               <p className="text-xs text-muted-foreground mt-2">
                 {income > 0 ? `${Math.round(expenses / income * 100)}% da receita` : "Este mês"}
@@ -293,15 +295,15 @@ const Dashboard = () => {
               {dailyTotals.length === 0 ? <div className="text-center py-12">
                   <p className="text-muted-foreground">Nenhuma movimentação este mês</p>
                 </div> : <ChartContainer config={{
-                  income: {
-                    label: "Receitas",
-                    color: "hsl(var(--success))",
-                  },
-                  expense: {
-                    label: "Despesas",
-                    color: "hsl(var(--destructive))",
-                  },
-                } as ChartConfig} className="h-[300px]">
+                income: {
+                  label: "Receitas",
+                  color: "hsl(var(--success))"
+                },
+                expense: {
+                  label: "Despesas",
+                  color: "hsl(var(--destructive))"
+                }
+              } as ChartConfig} className="h-[300px]">
                   <BarChart data={dailyTotals}>
                     <CartesianGrid vertical={false} />
                     <XAxis dataKey="date" tickLine={false} tickMargin={10} axisLine={false} />
@@ -317,8 +319,8 @@ const Dashboard = () => {
 
           {/* Expenses by Category */}
           <Card className="shadow-lg animate-slide-up" style={{
-          animationDelay: '0.1s'
-        }}>
+            animationDelay: '0.1s'
+          }}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-primary" />
@@ -331,22 +333,15 @@ const Dashboard = () => {
                   <p className="text-muted-foreground">Nenhuma despesa registrada este mês</p>
                 </div> : <>
                   <ChartContainer config={categoryTotals.reduce((acc, item) => {
-                    acc[item.name] = {
-                      label: `${item.emoji} ${item.name}`,
-                      color: item.color,
-                    };
-                    return acc;
-                  }, {} as ChartConfig)} className="h-[300px]">
+                  acc[item.name] = {
+                    label: `${item.emoji} ${item.name}`,
+                    color: item.color
+                  };
+                  return acc;
+                }, {} as ChartConfig)} className="h-[300px]">
                     <PieChart>
-                      <Pie 
-                        data={categoryTotals} 
-                        dataKey="amount" 
-                        nameKey="name" 
-                        innerRadius={60}
-                      >
-                        {categoryTotals.map((item, index) => (
-                          <Cell key={`cell-${index}`} fill={item.color} />
-                        ))}
+                      <Pie data={categoryTotals} dataKey="amount" nameKey="name" innerRadius={60}>
+                        {categoryTotals.map((item, index) => <Cell key={`cell-${index}`} fill={item.color} />)}
                       </Pie>
                       <Tooltip content={<ChartTooltipContent hideLabel />} />
                       <Legend content={<ChartLegendContent />} />
@@ -357,8 +352,8 @@ const Dashboard = () => {
                     <p className="text-sm text-muted-foreground mb-2">Total de Despesas</p>
                     <p className="text-2xl font-bold text-destructive">
                       R$ {expenses.toLocaleString('pt-BR', {
-                    minimumFractionDigits: 2
-                  })}
+                      minimumFractionDigits: 2
+                    })}
                     </p>
                   </div>
                 </>}
