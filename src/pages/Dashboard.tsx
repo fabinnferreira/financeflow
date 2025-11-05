@@ -163,7 +163,7 @@ const Dashboard = () => {
         </header>
         <div className="container mx-auto px-4 py-8">
           <div className="grid md:grid-cols-3 gap-6 mb-8">
-            <Skeleton className="h-32" />
+            <Skeleton className="h-32 bg-transparent" />
             <Skeleton className="h-32" />
             <Skeleton className="h-32" />
           </div>
