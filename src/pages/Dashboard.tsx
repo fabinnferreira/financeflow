@@ -10,6 +10,8 @@ import { TransactionDialog } from "@/components/TransactionDialog";
 import { PieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 import { ChartContainer, ChartTooltipContent, ChartLegend, ChartLegendContent, ChartConfig } from "@/components/ui/chart";
 import { startOfMonth, endOfMonth } from "date-fns";
+import DynamicBackground from "@/components/DynamicBackground";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface CategoryTotal {
   category_id: number;
@@ -166,17 +168,13 @@ const Dashboard = () => {
         </div>
       </div>;
   }
-  return <div className="min-h-screen bg-background">
-      {/* Floating Background */}
-      <div className="absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-float"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-success/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }}></div>
-      </div>
+  return <div className="min-h-screen relative overflow-hidden">
+      <DynamicBackground />
 
       {/* Content */}
       <div className="relative z-10">
         {/* Header */}
-        <header className="bg-gradient-primary/80 backdrop-blur-xl text-primary-foreground py-6 shadow-lg">
+        <header className="bg-primary/70 backdrop-blur-lg text-primary-foreground py-6 shadow-lg">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between">
             <div>
@@ -205,6 +203,8 @@ const Dashboard = () => {
                 Nova Transação
               </Button>
               
+              <ThemeToggle />
+              
               <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-foreground/20" onClick={handleSignOut} title="Sair">
                 <LogOut className="w-5 h-5" />
               </Button>
@@ -216,7 +216,7 @@ const Dashboard = () => {
       <div className="container mx-auto px-4 py-8">
         {/* Balance Cards */}
         <div className="grid md:grid-cols-3 gap-6 mb-8">
-          <Card className="bg-gradient-card border-2 border-primary/20 shadow-lg animate-fade-in">
+          <Card className="bg-gradient-card border-2 border-primary/20 shadow-lg animate-slide-up">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Saldo Total
@@ -235,7 +235,7 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-card border-2 border-success/20 shadow-lg animate-fade-in" style={{
+          <Card className="bg-gradient-card border-2 border-success/20 shadow-lg animate-slide-up" style={{
           animationDelay: '0.1s'
         }}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -257,7 +257,7 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-card border-2 border-destructive/20 shadow-lg animate-fade-in" style={{
+          <Card className="bg-gradient-card border-2 border-destructive/20 shadow-lg animate-slide-up" style={{
           animationDelay: '0.2s'
         }}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">

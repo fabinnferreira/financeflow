@@ -11,6 +11,7 @@ import { PlusCircle, Edit, Trash, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import DynamicBackground from "@/components/DynamicBackground";
 
 interface Category {
   id: number;
@@ -159,8 +160,9 @@ const Categories = () => {
   const incomeCategories = categories.filter((cat) => cat.type === "income");
 
   return (
-    <div className="min-h-screen bg-secondary/20">
-      <header className="bg-gradient-primary text-primary-foreground py-6 shadow-lg">
+    <div className="min-h-screen relative">
+      <DynamicBackground />
+      <header className="bg-primary/70 backdrop-blur-lg text-primary-foreground py-6 shadow-lg relative z-10">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -266,8 +268,8 @@ const Categories = () => {
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-8">
-        <Tabs defaultValue="expense" className="w-full">
+      <div className="container mx-auto px-4 py-8 relative z-10">
+        <Tabs defaultValue="expense" className="w-full animate-fade-in">
           <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-8">
             <TabsTrigger value="expense">Despesas</TabsTrigger>
             <TabsTrigger value="income">Receitas</TabsTrigger>

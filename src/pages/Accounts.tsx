@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
+import DynamicBackground from '@/components/DynamicBackground';
 
 interface Account {
   id: number;
@@ -198,8 +199,9 @@ const Accounts = () => {
   };
 
   return (
-    <div className="min-h-screen p-8 bg-secondary/20">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen p-8 relative">
+      <DynamicBackground />
+      <div className="max-w-7xl mx-auto relative z-10">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-4xl font-bold">Minhas Contas</h1>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -258,7 +260,7 @@ const Accounts = () => {
           </Dialog>
         </div>
 
-        <Tabs defaultValue="bank" className="w-full">
+        <Tabs defaultValue="bank" className="w-full animate-fade-in">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="bank">
               <Landmark className="mr-2 h-4 w-4" />

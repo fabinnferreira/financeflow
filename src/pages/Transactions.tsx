@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+import DynamicBackground from "@/components/DynamicBackground";
 
 interface Transaction {
   id: number;
@@ -177,8 +178,9 @@ export default function Transactions() {
   );
 
   return (
-    <div className="min-h-screen bg-background p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <div className="min-h-screen relative p-8">
+      <DynamicBackground />
+      <div className="max-w-7xl mx-auto space-y-8 relative z-10">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button
@@ -196,7 +198,7 @@ export default function Transactions() {
           </Button>
         </div>
 
-        <Card>
+        <Card className="animate-fade-in">
           <CardHeader>
             <CardTitle>Histórico de Transações</CardTitle>
           </CardHeader>
