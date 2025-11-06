@@ -16,6 +16,18 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import DynamicBackground from "@/components/DynamicBackground";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Transaction {
   id: number;
@@ -31,7 +43,7 @@ interface Transaction {
 
 export default function Transactions() {
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const { toast: legacyToast } = useToast();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -55,11 +67,7 @@ export default function Transactions() {
       .order("date", { ascending: false });
 
     if (error) {
-      toast({
-        title: "Erro ao carregar transações",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error("Erro ao carregar transações");
     } else {
       setTransactions(data || []);
     }
@@ -67,22 +75,19 @@ export default function Transactions() {
   };
 
   const handleDelete = async (id: number) => {
-    const { error } = await supabase
-      .from("transactions")
-      .delete()
-      .eq("id", id);
+    try {
+      const { error } = await supabase
+        .from("transactions")
+        .delete()
+        .eq("id", id);
 
-    if (error) {
-      toast({
-        title: "Erro ao excluir transação",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Transação excluída com sucesso!",
-      });
+      if (error) throw error;
+
+      toast.success("Transação excluída com sucesso!");
       fetchTransactions();
+    } catch (error: any) {
+      console.error("Error deleting transaction:", error);
+      toast.error("Erro ao excluir transação");
     }
   };
 
@@ -161,12 +166,30 @@ export default function Transactions() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem>Editar</DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="text-destructive"
-                      onClick={() => handleDelete(transaction.id)}
-                    >
-                      Excluir
-                    </DropdownMenuItem>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onSelect={(e) => e.preventDefault()}
+                        >
+                          Excluir
+                        </DropdownMenuItem>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta ação não pode ser desfeita. Isso irá deletar permanentemente esta transação.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDelete(transaction.id)}>
+                            Excluir
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </TableCell>

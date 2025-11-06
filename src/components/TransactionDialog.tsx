@@ -5,8 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface Account {
   id: number;
@@ -39,7 +39,6 @@ export function TransactionDialog({ open, onOpenChange, onSuccess }: Transaction
     category_id: "",
     date: new Date().toISOString().split('T')[0],
   });
-  const { toast } = useToast();
 
   useEffect(() => {
     if (open) {
@@ -87,11 +86,7 @@ export function TransactionDialog({ open, onOpenChange, onSuccess }: Transaction
     e.preventDefault();
     
     if (!formData.description || !formData.amount || !formData.account_id || !formData.category_id) {
-      toast({
-        title: "Campos obrigatórios",
-        description: "Por favor, preencha todos os campos",
-        variant: "destructive",
-      });
+      toast.error("Por favor, preencha todos os campos");
       return;
     }
 
@@ -117,10 +112,7 @@ export function TransactionDialog({ open, onOpenChange, onSuccess }: Transaction
 
       if (error) throw error;
 
-      toast({
-        title: "Transação criada!",
-        description: "Sua transação foi registrada com sucesso",
-      });
+      toast.success("Transação criada com sucesso!");
 
       setFormData({
         type: "expense",
@@ -135,11 +127,7 @@ export function TransactionDialog({ open, onOpenChange, onSuccess }: Transaction
       onSuccess();
     } catch (error: any) {
       console.error("Error creating transaction:", error);
-      toast({
-        title: "Erro ao criar transação",
-        description: error.message || "Tente novamente mais tarde",
-        variant: "destructive",
-      });
+      toast.error("Erro ao criar transação");
     } finally {
       setLoading(false);
     }

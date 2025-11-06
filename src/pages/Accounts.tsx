@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { PlusCircle, Edit, Trash, Landmark, CreditCard, Wallet } from 'lucide-react';
+import { PlusCircle, Edit, Trash, Landmark, CreditCard, Wallet, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -9,8 +9,19 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import DynamicBackground from '@/components/DynamicBackground';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Account {
   id: number;
@@ -23,6 +34,7 @@ interface Account {
 const Accounts = () => {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -42,11 +54,7 @@ const Accounts = () => {
       .order('name');
 
     if (error) {
-      toast({
-        title: 'Erro ao carregar contas',
-        description: error.message,
-        variant: 'destructive'
-      });
+      toast.error('Erro ao carregar contas');
     } else {
       setAccounts(data || []);
     }
@@ -60,60 +68,53 @@ const Accounts = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      toast({
-        title: 'Erro',
-        description: 'Usuário não autenticado',
-        variant: 'destructive'
-      });
-      return;
-    }
+    try {
+      setIsSubmitting(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Usuário não autenticado');
+        return;
+      }
 
-    const balance_cents = Math.round(parseFloat(formData.balance) * 100);
+      const balance_cents = Math.round(parseFloat(formData.balance) * 100);
 
-    const { error } = await supabase
-      .from('accounts')
-      .insert([{
-        name: formData.name,
-        type: formData.type,
-        balance_cents,
-        user_id: user.id
-      }]);
+      const { error } = await supabase
+        .from('accounts')
+        .insert([{
+          name: formData.name,
+          type: formData.type,
+          balance_cents,
+          user_id: user.id
+        }]);
 
-    if (error) {
-      toast({
-        title: 'Erro ao criar conta',
-        description: error.message,
-        variant: 'destructive'
-      });
-    } else {
-      toast({
-        title: 'Conta criada com sucesso!'
-      });
+      if (error) throw error;
+
+      toast.success('Conta criada com sucesso!');
       setDialogOpen(false);
       setFormData({ name: '', type: 'bank', balance: '0' });
       fetchAccounts();
+    } catch (error: any) {
+      console.error("Error creating account:", error);
+      toast.error('Erro ao criar conta');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleDelete = async (id: number) => {
-    const { error } = await supabase
-      .from('accounts')
-      .delete()
-      .eq('id', id);
+    try {
+      const { error } = await supabase
+        .from('accounts')
+        .delete()
+        .eq('id', id);
 
-    if (error) {
-      toast({
-        title: 'Erro ao excluir conta',
-        description: error.message,
-        variant: 'destructive'
-      });
-    } else {
-      toast({
-        title: 'Conta excluída com sucesso!'
-      });
+      if (error) throw error;
+
+      toast.success('Conta excluída com sucesso!');
       fetchAccounts();
+    } catch (error: any) {
+      console.error("Error deleting account:", error);
+      toast.error('Erro ao excluir conta');
     }
   };
 
@@ -177,14 +178,31 @@ const Accounts = () => {
                 >
                   <Edit className="h-4 w-4" />
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => handleDelete(account.id)}
-                >
-                  <Trash className="h-4 w-4" />
-                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                    >
+                      <Trash className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Esta ação não pode ser desfeita. Isso irá deletar permanentemente esta conta.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => handleDelete(account.id)}>
+                        Excluir
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             </CardHeader>
             <CardContent>
@@ -252,7 +270,8 @@ const Accounts = () => {
                     required
                   />
                 </div>
-                <Button type="submit" className="w-full">
+                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Criar Conta
                 </Button>
               </form>

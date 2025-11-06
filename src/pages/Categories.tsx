@@ -7,11 +7,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PlusCircle, Edit, Trash, ArrowLeft } from "lucide-react";
+import { PlusCircle, Edit, Trash, ArrowLeft, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import DynamicBackground from "@/components/DynamicBackground";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Category {
   id: number;
@@ -24,6 +36,7 @@ interface Category {
 const Categories = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -31,7 +44,7 @@ const Categories = () => {
     color: "#3b82f6",
     type: "expense",
   });
-  const { toast } = useToast();
+  const { toast: legacyToast } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -55,11 +68,7 @@ const Categories = () => {
       setCategories(data || []);
     } catch (error: any) {
       console.error("Error fetching categories:", error);
-      toast({
-        title: "Erro ao carregar categorias",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error("Erro ao carregar categorias");
     } finally {
       setLoading(false);
     }
@@ -69,15 +78,12 @@ const Categories = () => {
     e.preventDefault();
 
     if (!formData.name || !formData.emoji) {
-      toast({
-        title: "Campos obrigatórios",
-        description: "Preencha todos os campos",
-        variant: "destructive",
-      });
+      toast.error("Preencha todos os campos");
       return;
     }
 
     try {
+      setIsSubmitting(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
@@ -93,10 +99,7 @@ const Categories = () => {
 
       if (error) throw error;
 
-      toast({
-        title: "Categoria criada!",
-        description: "Sua categoria foi criada com sucesso",
-      });
+      toast.success("Categoria criada com sucesso!");
 
       setFormData({
         name: "",
@@ -108,11 +111,9 @@ const Categories = () => {
       fetchCategories();
     } catch (error: any) {
       console.error("Error creating category:", error);
-      toast({
-        title: "Erro ao criar categoria",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error("Erro ao criar categoria");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -125,19 +126,11 @@ const Categories = () => {
 
       if (error) throw error;
 
-      toast({
-        title: "Categoria deletada",
-        description: "Sua categoria foi removida com sucesso",
-      });
-
+      toast.success("Categoria deletada com sucesso!");
       fetchCategories();
     } catch (error: any) {
       console.error("Error deleting category:", error);
-      toast({
-        title: "Erro ao deletar categoria",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error("Erro ao deletar categoria");
     }
   };
 
@@ -254,10 +247,12 @@ const Categories = () => {
                       variant="outline"
                       onClick={() => setDialogOpen(false)}
                       className="flex-1"
+                      disabled={isSubmitting}
                     >
                       Cancelar
                     </Button>
-                    <Button type="submit" variant="success" className="flex-1">
+                    <Button type="submit" variant="success" className="flex-1" disabled={isSubmitting}>
+                      {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       Criar
                     </Button>
                   </div>
@@ -318,15 +313,32 @@ const Categories = () => {
                           <Edit className="w-4 h-4" />
                           Editar
                         </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          className="flex-1 gap-2"
-                          onClick={() => handleDelete(category.id)}
-                        >
-                          <Trash className="w-4 h-4" />
-                          Deletar
-                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="flex-1 gap-2"
+                            >
+                              <Trash className="w-4 h-4" />
+                              Deletar
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Esta ação não pode ser desfeita. Isso irá deletar permanentemente esta categoria.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDelete(category.id)}>
+                                Excluir
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </CardContent>
                   </Card>
@@ -378,15 +390,32 @@ const Categories = () => {
                           <Edit className="w-4 h-4" />
                           Editar
                         </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          className="flex-1 gap-2"
-                          onClick={() => handleDelete(category.id)}
-                        >
-                          <Trash className="w-4 h-4" />
-                          Deletar
-                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="flex-1 gap-2"
+                            >
+                              <Trash className="w-4 h-4" />
+                              Deletar
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Esta ação não pode ser desfeita. Isso irá deletar permanentemente esta categoria.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDelete(category.id)}>
+                                Excluir
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </CardContent>
                   </Card>
