@@ -200,6 +200,11 @@ const Dashboard = () => {
                 Contas
               </Button>
               
+              <Button variant="ghost" size="lg" className="text-primary-foreground hover:bg-primary-foreground/20 gap-2" onClick={() => navigate("/roadmap")}>
+                <TrendingUp className="w-5 h-5" />
+                Roadmap
+              </Button>
+              
               <Button variant="success" size="lg" className="gap-2" onClick={() => setDialogOpen(true)}>
                 <Plus className="w-5 h-5" />
                 Nova Transação
