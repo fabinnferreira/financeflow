@@ -9,10 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { PlusCircle, Edit, Trash, ArrowLeft, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import DynamicBackground from "@/components/DynamicBackground";
 import { toast } from "sonner";
+import { categorySchema } from "@/lib/validations";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,7 +44,6 @@ const Categories = () => {
     color: "#3b82f6",
     type: "expense",
   });
-  const { toast: legacyToast } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -77,8 +76,10 @@ const Categories = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name || !formData.emoji) {
-      toast.error("Preencha todos os campos");
+    const validation = categorySchema.safeParse(formData);
+    if (!validation.success) {
+      const firstError = validation.error.errors[0];
+      toast.error(firstError.message);
       return;
     }
 
