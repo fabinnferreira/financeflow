@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { transactionSchema } from "@/lib/validations";
 
 interface Account {
   id: number;
@@ -85,8 +86,10 @@ export function TransactionDialog({ open, onOpenChange, onSuccess }: Transaction
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.description || !formData.amount || !formData.account_id || !formData.category_id) {
-      toast.error("Por favor, preencha todos os campos");
+    const validation = transactionSchema.safeParse(formData);
+    if (!validation.success) {
+      const firstError = validation.error.errors[0];
+      toast.error(firstError.message);
       return;
     }
 

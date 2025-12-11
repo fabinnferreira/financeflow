@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import DynamicBackground from '@/components/DynamicBackground';
+import { accountSchema } from '@/lib/validations';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -67,6 +68,13 @@ const Accounts = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const validation = accountSchema.safeParse(formData);
+    if (!validation.success) {
+      const firstError = validation.error.errors[0];
+      toast.error(firstError.message);
+      return;
+    }
     
     try {
       setIsSubmitting(true);
