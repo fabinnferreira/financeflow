@@ -36,16 +36,12 @@ const Hero = () => {
 
             <div className="flex flex-col sm:flex-row gap-4">
               <Button variant="hero" size="xl" className="group" asChild>
-                <Link to="/auth">
-                  Começar Gratuitamente
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                <Link to="/auth">COMEÇAR GRATUITAMENTE<ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Link>
               </Button>
               
               <Button variant="outline" size="xl" asChild>
-                <a href="#recursos">
-                  Ver Recursos
-                </a>
+                <a href="#recursos">VER RECURSOS</a>
               </Button>
             </div>
 
