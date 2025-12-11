@@ -21,11 +21,9 @@ const Hero = () => {
               <span className="text-sm font-medium text-success">Controle Total das Suas Finanças</span>
             </div>
 
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold leading-tight">
-              Gerencie suas
-              <span className="block bg-gradient-hero bg-clip-text animate-glow text-blue-600">
-                finanças pessoais
-              </span>
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold leading-tight">Gerencie Suas
+Finanças Pessoais
+Com Inteligência<span className="block bg-gradient-hero bg-clip-text animate-glow text-blue-600">Finanças Pessoais</span>
               com inteligência
             </h1>
 
