@@ -210,6 +210,24 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_category_totals: {
+        Args: { end_date: string; start_date: string }
+        Returns: {
+          category_id: number
+          color: string
+          emoji: string
+          name: string
+          total_amount_cents: number
+        }[]
+      }
+      get_daily_totals: {
+        Args: { end_date: string; start_date: string }
+        Returns: {
+          date: string
+          expense: number
+          income: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
