@@ -8,6 +8,7 @@ import Dashboard from "./pages/Dashboard";
 import Categories from "./pages/Categories";
 import Accounts from "./pages/Accounts";
 import Transactions from "./pages/Transactions";
+import Settings from "./pages/Settings";
 import AuthPage from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -41,6 +42,11 @@ const App = () => (
           <Route path="/transactions" element={
             <ProtectedRoute>
               <Transactions />
+            </ProtectedRoute>
+          } />
+          <Route path="/settings" element={
+            <ProtectedRoute>
+              <Settings />
             </ProtectedRoute>
           } />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
