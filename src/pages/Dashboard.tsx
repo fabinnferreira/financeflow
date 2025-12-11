@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowUpRight, ArrowDownRight, Wallet, CreditCard, TrendingUp, Plus, LogOut, FolderKanban, Calendar } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Wallet, CreditCard, TrendingUp, Plus, LogOut, FolderKanban, Calendar, Settings } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -224,6 +224,10 @@ const Dashboard = () => {
                 </Button>
                 
                 <ThemeToggle />
+                
+                <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-foreground/20" onClick={() => navigate("/settings")} title="Configurações">
+                  <Settings className="w-5 h-5" />
+                </Button>
                 
                 <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-foreground/20" onClick={handleSignOut} title="Sair">
                   <LogOut className="w-5 h-5" />

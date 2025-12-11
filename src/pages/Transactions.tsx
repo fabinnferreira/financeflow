@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { ArrowUpRight, ArrowDownRight, FileDown, MoreHorizontal, ArrowLeft, Search, X, Filter } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, FileDown, MoreHorizontal, ArrowLeft, Search, X, Filter, FileSpreadsheet, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -15,12 +15,16 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import DynamicBackground from "@/components/DynamicBackground";
 import { toast } from "sonner";
 import { DateRangePicker } from "@/components/DateRangePicker";
-import { startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
+import { startOfMonth, endOfMonth, isWithinInterval, parseISO, format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { exportTransactionsToPDF } from "@/utils/exportPDF";
+import { exportTransactionsToExcel } from "@/utils/exportExcel";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -146,16 +150,13 @@ export default function Transactions() {
 
   const filteredTransactions = useMemo(() => {
     return transactions.filter((t) => {
-      // Search filter
       const matchesSearch = searchTerm === "" || 
         t.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
         t.categories.name.toLowerCase().includes(searchTerm.toLowerCase());
 
-      // Category filter
       const matchesCategory = selectedCategory === "all" || 
         t.categories.id.toString() === selectedCategory;
 
-      // Date filter
       const transactionDate = parseISO(t.date);
       const matchesDate = isWithinInterval(transactionDate, { start: startDate, end: endDate });
 
@@ -169,6 +170,40 @@ export default function Transactions() {
   };
 
   const hasActiveFilters = searchTerm !== "" || selectedCategory !== "all";
+
+  // Export functions
+  const getExportSummary = () => {
+    const totalIncome = filteredTransactions
+      .filter((t) => t.type === "income")
+      .reduce((sum, t) => sum + t.amount_cents / 100, 0);
+    
+    const totalExpenses = filteredTransactions
+      .filter((t) => t.type === "expense")
+      .reduce((sum, t) => sum + t.amount_cents / 100, 0);
+
+    const period = `${format(startDate, "dd/MM/yyyy", { locale: ptBR })} - ${format(endDate, "dd/MM/yyyy", { locale: ptBR })}`;
+
+    return {
+      totalIncome,
+      totalExpenses,
+      balance: totalIncome - totalExpenses,
+      period,
+    };
+  };
+
+  const handleExportPDF = () => {
+    const summary = getExportSummary();
+    const fileName = `transacoes_${format(new Date(), "yyyy-MM-dd")}`;
+    exportTransactionsToPDF(filteredTransactions, summary, fileName);
+    toast.success("Relatório PDF exportado com sucesso!");
+  };
+
+  const handleExportExcel = () => {
+    const summary = getExportSummary();
+    const fileName = `transacoes_${format(new Date(), "yyyy-MM-dd")}`;
+    exportTransactionsToExcel(filteredTransactions, summary, fileName);
+    toast.success("Relatório Excel exportado com sucesso!");
+  };
 
   const renderTable = (filteredByType: Transaction[]) => (
     <Table>
@@ -278,10 +313,27 @@ export default function Transactions() {
             </Button>
             <h1 className="text-4xl font-bold">Minhas Transações</h1>
           </div>
-          <Button variant="outline">
-            <FileDown className="mr-2 h-4 w-4" />
-            Exportar
-          </Button>
+          
+          {/* Export Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <FileDown className="h-4 w-4" />
+                Exportar
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleExportPDF} className="gap-2">
+                <FileText className="h-4 w-4" />
+                Exportar PDF
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleExportExcel} className="gap-2">
+                <FileSpreadsheet className="h-4 w-4" />
+                Exportar Excel
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Search and Filters */}
