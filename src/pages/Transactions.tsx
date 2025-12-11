@@ -1,13 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { ArrowUpRight, ArrowDownRight, FileDown, MoreHorizontal, ArrowLeft } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, FileDown, MoreHorizontal, ArrowLeft, Search, X, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +19,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import DynamicBackground from "@/components/DynamicBackground";
 import { toast } from "sonner";
+import { DateRangePicker } from "@/components/DateRangePicker";
+import { startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,19 +40,35 @@ interface Transaction {
   amount_cents: number;
   date: string;
   categories: {
+    id: number;
     name: string;
     emoji: string;
   };
+}
+
+interface Category {
+  id: number;
+  name: string;
+  emoji: string;
 }
 
 export default function Transactions() {
   const navigate = useNavigate();
   const { toast: legacyToast } = useToast();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Filters
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [startDate, setStartDate] = useState<Date>(startOfMonth(new Date()));
+  const [endDate, setEndDate] = useState<Date>(endOfMonth(new Date()));
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     fetchTransactions();
+    fetchCategories();
   }, []);
 
   const fetchTransactions = async () => {
@@ -62,7 +82,7 @@ export default function Transactions() {
 
     const { data, error } = await supabase
       .from("transactions")
-      .select("*, categories(name, emoji)")
+      .select("*, categories(id, name, emoji)")
       .eq("user_id", user.id)
       .order("date", { ascending: false });
 
@@ -72,6 +92,21 @@ export default function Transactions() {
       setTransactions(data || []);
     }
     setLoading(false);
+  };
+
+  const fetchCategories = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data } = await supabase
+      .from("categories")
+      .select("id, name, emoji")
+      .eq("user_id", user.id)
+      .order("name");
+
+    if (data) {
+      setCategories(data);
+    }
   };
 
   const handleDelete = async (id: number) => {
@@ -102,12 +137,40 @@ export default function Transactions() {
     return new Date(dateString).toLocaleDateString("pt-BR");
   };
 
-  const filterTransactions = (type?: string) => {
-    if (!type) return transactions;
-    return transactions.filter((t) => t.type === type);
+  const clearFilters = () => {
+    setSearchTerm("");
+    setSelectedCategory("all");
+    setStartDate(startOfMonth(new Date()));
+    setEndDate(endOfMonth(new Date()));
   };
 
-  const renderTable = (filteredTransactions: Transaction[]) => (
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter((t) => {
+      // Search filter
+      const matchesSearch = searchTerm === "" || 
+        t.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.categories.name.toLowerCase().includes(searchTerm.toLowerCase());
+
+      // Category filter
+      const matchesCategory = selectedCategory === "all" || 
+        t.categories.id.toString() === selectedCategory;
+
+      // Date filter
+      const transactionDate = parseISO(t.date);
+      const matchesDate = isWithinInterval(transactionDate, { start: startDate, end: endDate });
+
+      return matchesSearch && matchesCategory && matchesDate;
+    });
+  }, [transactions, searchTerm, selectedCategory, startDate, endDate]);
+
+  const filterByType = (type?: string) => {
+    if (!type) return filteredTransactions;
+    return filteredTransactions.filter((t) => t.type === type);
+  };
+
+  const hasActiveFilters = searchTerm !== "" || selectedCategory !== "all";
+
+  const renderTable = (filteredByType: Transaction[]) => (
     <Table>
       <TableHeader>
         <TableRow>
@@ -131,14 +194,14 @@ export default function Transactions() {
               <TableCell><Skeleton className="h-4 w-8" /></TableCell>
             </TableRow>
           ))
-        ) : filteredTransactions.length === 0 ? (
+        ) : filteredByType.length === 0 ? (
           <TableRow>
             <TableCell colSpan={6} className="text-center text-muted-foreground">
-              Nenhuma transação encontrada
+              {hasActiveFilters ? "Nenhuma transação encontrada com os filtros aplicados" : "Nenhuma transação encontrada"}
             </TableCell>
           </TableRow>
         ) : (
-          filteredTransactions.map((transaction) => (
+          filteredByType.map((transaction) => (
             <TableRow key={transaction.id}>
               <TableCell>
                 {transaction.type === "income" ? (
@@ -221,6 +284,83 @@ export default function Transactions() {
           </Button>
         </div>
 
+        {/* Search and Filters */}
+        <Card className="animate-fade-in">
+          <CardContent className="pt-6">
+            <div className="flex flex-col gap-4">
+              {/* Search Bar */}
+              <div className="flex gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por descrição ou categoria..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <Button
+                  variant={showFilters ? "default" : "outline"}
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="gap-2"
+                >
+                  <Filter className="h-4 w-4" />
+                  Filtros
+                  {hasActiveFilters && (
+                    <Badge variant="secondary" className="ml-1">
+                      {(searchTerm !== "" ? 1 : 0) + (selectedCategory !== "all" ? 1 : 0)}
+                    </Badge>
+                  )}
+                </Button>
+                {hasActiveFilters && (
+                  <Button variant="ghost" onClick={clearFilters} className="gap-2">
+                    <X className="h-4 w-4" />
+                    Limpar
+                  </Button>
+                )}
+              </div>
+
+              {/* Advanced Filters */}
+              {showFilters && (
+                <div className="flex flex-wrap gap-4 pt-4 border-t">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">Categoria:</span>
+                    <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                      <SelectTrigger className="w-[200px]">
+                        <SelectValue placeholder="Todas as categorias" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas as categorias</SelectItem>
+                        {categories.map((category) => (
+                          <SelectItem key={category.id} value={category.id.toString()}>
+                            {category.emoji} {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">Período:</span>
+                    <DateRangePicker
+                      startDate={startDate}
+                      endDate={endDate}
+                      onStartDateChange={setStartDate}
+                      onEndDateChange={setEndDate}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Results Summary */}
+        {!loading && (
+          <div className="text-sm text-muted-foreground">
+            Mostrando {filteredTransactions.length} de {transactions.length} transações
+          </div>
+        )}
+
         <Card className="animate-fade-in">
           <CardHeader>
             <CardTitle>Histórico de Transações</CardTitle>
@@ -228,18 +368,18 @@ export default function Transactions() {
           <CardContent>
             <Tabs defaultValue="all">
               <TabsList>
-                <TabsTrigger value="all">Todas</TabsTrigger>
-                <TabsTrigger value="income">Receitas</TabsTrigger>
-                <TabsTrigger value="expense">Despesas</TabsTrigger>
+                <TabsTrigger value="all">Todas ({filterByType().length})</TabsTrigger>
+                <TabsTrigger value="income">Receitas ({filterByType("income").length})</TabsTrigger>
+                <TabsTrigger value="expense">Despesas ({filterByType("expense").length})</TabsTrigger>
               </TabsList>
               <TabsContent value="all" className="mt-6">
-                {renderTable(filterTransactions())}
+                {renderTable(filterByType())}
               </TabsContent>
               <TabsContent value="income" className="mt-6">
-                {renderTable(filterTransactions("income"))}
+                {renderTable(filterByType("income"))}
               </TabsContent>
               <TabsContent value="expense" className="mt-6">
-                {renderTable(filterTransactions("expense"))}
+                {renderTable(filterByType("expense"))}
               </TabsContent>
             </Tabs>
           </CardContent>

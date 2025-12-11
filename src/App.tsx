@@ -8,12 +8,14 @@ import Dashboard from "./pages/Dashboard";
 import Categories from "./pages/Categories";
 import Accounts from "./pages/Accounts";
 import Transactions from "./pages/Transactions";
-import Roadmap from "./pages/Roadmap";
 import AuthPage from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+
 const queryClient = new QueryClient();
-const App = () => <QueryClientProvider client={queryClient}>
+
+const App = () => (
+  <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
@@ -21,25 +23,32 @@ const App = () => <QueryClientProvider client={queryClient}>
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/auth" element={<AuthPage />} />
-          <Route path="/dashboard" element={<ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>} />
-          <Route path="/categories" element={<ProtectedRoute>
-                <Categories />
-              </ProtectedRoute>} />
-          <Route path="/accounts" element={<ProtectedRoute>
-                <Accounts />
-              </ProtectedRoute>} />
-          <Route path="/transactions" element={<ProtectedRoute>
-                <Transactions />
-              </ProtectedRoute>} />
-          <Route path="/roadmap" element={<ProtectedRoute>
-                <Roadmap />
-              </ProtectedRoute>} />
+          <Route path="/dashboard" element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/categories" element={
+            <ProtectedRoute>
+              <Categories />
+            </ProtectedRoute>
+          } />
+          <Route path="/accounts" element={
+            <ProtectedRoute>
+              <Accounts />
+            </ProtectedRoute>
+          } />
+          <Route path="/transactions" element={
+            <ProtectedRoute>
+              <Transactions />
+            </ProtectedRoute>
+          } />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
-  </QueryClientProvider>;
+  </QueryClientProvider>
+);
+
 export default App;
