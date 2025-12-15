@@ -77,3 +77,41 @@ export const transactionSchema = z.object({
 });
 
 export type TransactionFormData = z.infer<typeof transactionSchema>;
+
+// Goal validation schema
+export const goalSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, { message: "Nome é obrigatório" })
+    .max(100, { message: "Nome deve ter no máximo 100 caracteres" }),
+  target_amount: z
+    .string()
+    .refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
+      message: "Valor deve ser um número positivo",
+    })
+    .refine((val) => parseFloat(val) <= 999999999, {
+      message: "Valor deve estar dentro do limite permitido",
+    }),
+  current_amount: z
+    .string()
+    .refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, {
+      message: "Valor deve ser um número não negativo",
+    })
+    .refine((val) => parseFloat(val) <= 999999999, {
+      message: "Valor deve estar dentro do limite permitido",
+    }),
+  deadline: z
+    .string()
+    .optional(),
+  emoji: z
+    .string()
+    .trim()
+    .min(1, { message: "Emoji é obrigatório" })
+    .max(10, { message: "Emoji deve ter no máximo 10 caracteres" }),
+  color: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/, { message: "Cor inválida" }),
+});
+
+export type GoalFormData = z.infer<typeof goalSchema>;
