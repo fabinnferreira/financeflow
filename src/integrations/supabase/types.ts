@@ -115,6 +115,45 @@ export type Database = {
           },
         ]
       }
+      financial_goals: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          current_amount_cents: number
+          deadline: string | null
+          emoji: string | null
+          id: number
+          name: string
+          target_amount_cents: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          current_amount_cents?: number
+          deadline?: string | null
+          emoji?: string | null
+          id?: number
+          name: string
+          target_amount_cents: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          current_amount_cents?: number
+          deadline?: string | null
+          emoji?: string | null
+          id?: number
+          name?: string
+          target_amount_cents?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           id: string

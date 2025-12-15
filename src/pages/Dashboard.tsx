@@ -3,12 +3,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowUpRight, ArrowDownRight, Wallet, CreditCard, TrendingUp, Plus, LogOut, FolderKanban, Calendar, Settings } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Wallet, CreditCard, TrendingUp, Plus, LogOut, FolderKanban, Calendar, Settings, Target } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { TransactionDialog } from "@/components/TransactionDialog";
 import { DateRangePicker } from "@/components/DateRangePicker";
+import { GoalsWidget } from "@/components/GoalsWidget";
 import { PieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 import { ChartContainer, ChartTooltipContent, ChartLegend, ChartLegendContent, ChartConfig } from "@/components/ui/chart";
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear, subMonths } from "date-fns";
@@ -218,6 +219,11 @@ const Dashboard = () => {
                   Contas
                 </Button>
                 
+                <Button variant="outline" size="lg" onClick={() => navigate("/goals")} className="gap-2 border-primary-foreground/30 hover:bg-primary-foreground/20 text-[#17ab4e] font-extralight">
+                  <Target className="w-5 h-5" />
+                  Metas
+                </Button>
+                
                 <Button variant="success" size="lg" className="gap-2" onClick={() => setDialogOpen(true)}>
                   <Plus className="w-5 h-5" />
                   Nova Transação
@@ -398,6 +404,11 @@ const Dashboard = () => {
                 )}
               </CardContent>
             </Card>
+          </div>
+
+          {/* Goals Widget */}
+          <div className="mt-8">
+            <GoalsWidget />
           </div>
         </div>
 
