@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { ArrowUpRight, ArrowDownRight, FileDown, MoreHorizontal, ArrowLeft, Search, X, Filter, FileSpreadsheet, FileText } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, FileDown, MoreHorizontal, ArrowLeft, Search, X, Filter, FileSpreadsheet, FileText, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -25,6 +25,7 @@ import { startOfMonth, endOfMonth, isWithinInterval, parseISO, format } from "da
 import { ptBR } from "date-fns/locale";
 import { exportTransactionsToPDF } from "@/utils/exportPDF";
 import { exportTransactionsToExcel } from "@/utils/exportExcel";
+import { EditTransactionDialog } from "@/components/EditTransactionDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,6 +44,8 @@ interface Transaction {
   description: string;
   amount_cents: number;
   date: string;
+  account_id: number;
+  category_id: number;
   categories: {
     id: number;
     name: string;
@@ -62,6 +65,10 @@ export default function Transactions() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Edit dialog
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
@@ -128,6 +135,11 @@ export default function Transactions() {
       console.error("Error deleting transaction:", error);
       toast.error("Erro ao excluir transação");
     }
+  };
+
+  const handleEdit = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setEditDialogOpen(true);
   };
 
   const formatCurrency = (cents: number) => {
@@ -263,7 +275,10 @@ export default function Transactions() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem>Editar</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleEdit(transaction)}>
+                      <Pencil className="h-4 w-4 mr-2" />
+                      Editar
+                    </DropdownMenuItem>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <DropdownMenuItem
@@ -437,6 +452,13 @@ export default function Transactions() {
           </CardContent>
         </Card>
       </div>
+      
+      <EditTransactionDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onSuccess={fetchTransactions}
+        transaction={selectedTransaction}
+      />
     </div>
   );
 }

@@ -1,1 +1,4 @@
 project_id = "xzzbnnivmbqtiprepxeo"
+
+[functions.check-credit-card-due]
+verify_jwt = false
