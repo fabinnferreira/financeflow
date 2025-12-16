@@ -24,6 +24,22 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Authenticate using service role key or custom secret
+    const authHeader = req.headers.get('authorization')
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    const expectedAuth = `Bearer ${serviceKey}`
+    
+    if (!authHeader || authHeader !== expectedAuth) {
+      console.error('Unauthorized access attempt to check-credit-card-due')
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401,
+        }
+      )
+    }
+
     console.log('Starting credit card due date check...')
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
