@@ -34,7 +34,7 @@ Com Inteligência<span className="block bg-gradient-hero bg-clip-text animate-gl
 
             <div className="flex flex-col sm:flex-row gap-4">
               <Button variant="hero" size="xl" className="group" asChild>
-                <Link to="/auth" className="text-primary-foreground">COMEÇAR GRATUITAMENTE<ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                <Link to="/auth" className="text-secondary">COMEÇAR GRATUITAMENTE<ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Link>
               </Button>
               
