@@ -44,6 +44,42 @@ export type Database = {
         }
         Relationships: []
       }
+      bank_connections: {
+        Row: {
+          connector_logo: string | null
+          connector_name: string
+          created_at: string
+          id: string
+          last_sync_at: string | null
+          pluggy_item_id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          connector_logo?: string | null
+          connector_name: string
+          created_at?: string
+          id?: string
+          last_sync_at?: string | null
+          pluggy_item_id: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          connector_logo?: string | null
+          connector_name?: string
+          created_at?: string
+          id?: string
+          last_sync_at?: string | null
+          pluggy_item_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           color: string | null
@@ -186,6 +222,69 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      pluggy_accounts: {
+        Row: {
+          balance_cents: number
+          bank_connection_id: string
+          created_at: string
+          currency_code: string | null
+          id: string
+          last_sync_at: string | null
+          local_account_id: number | null
+          name: string
+          pluggy_account_id: string
+          subtype: string | null
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance_cents?: number
+          bank_connection_id: string
+          created_at?: string
+          currency_code?: string | null
+          id?: string
+          last_sync_at?: string | null
+          local_account_id?: number | null
+          name: string
+          pluggy_account_id: string
+          subtype?: string | null
+          type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance_cents?: number
+          bank_connection_id?: string
+          created_at?: string
+          currency_code?: string | null
+          id?: string
+          last_sync_at?: string | null
+          local_account_id?: number | null
+          name?: string
+          pluggy_account_id?: string
+          subtype?: string | null
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pluggy_accounts_bank_connection_id_fkey"
+            columns: ["bank_connection_id"]
+            isOneToOne: false
+            referencedRelation: "bank_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pluggy_accounts_local_account_id_fkey"
+            columns: ["local_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
