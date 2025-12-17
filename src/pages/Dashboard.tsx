@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowUpRight, ArrowDownRight, Wallet, CreditCard, TrendingUp, Plus, LogOut, FolderKanban, Calendar, Settings, Target, BarChart3 } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Wallet, CreditCard, TrendingUp, Plus, LogOut, FolderKanban, Calendar, Settings, Target, BarChart3, Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -228,6 +228,11 @@ const Dashboard = () => {
                 <Button variant="outline" size="lg" onClick={() => navigate("/reports")} className="gap-2 border-primary-foreground/30 hover:bg-primary-foreground/20 text-[#17ab4e] font-extralight">
                   <BarChart3 className="w-5 h-5" />
                   Relatórios
+                </Button>
+                
+                <Button variant="outline" size="lg" onClick={() => navigate("/bank-connections")} className="gap-2 border-primary-foreground/30 hover:bg-primary-foreground/20 text-[#17ab4e] font-extralight">
+                  <Building2 className="w-5 h-5" />
+                  Open Banking
                 </Button>
                 
                 <Button variant="success" size="lg" className="gap-2" onClick={() => setDialogOpen(true)}>
