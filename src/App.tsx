@@ -11,6 +11,7 @@ import Transactions from "./pages/Transactions";
 import Settings from "./pages/Settings";
 import Goals from "./pages/Goals";
 import Reports from "./pages/Reports";
+import BankConnections from "./pages/BankConnections";
 import AuthPage from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -59,6 +60,11 @@ const App = () => (
           <Route path="/reports" element={
             <ProtectedRoute>
               <Reports />
+            </ProtectedRoute>
+          } />
+          <Route path="/bank-connections" element={
+            <ProtectedRoute>
+              <BankConnections />
             </ProtectedRoute>
           } />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
