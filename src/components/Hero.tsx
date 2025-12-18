@@ -23,7 +23,7 @@ const Hero = () => {
 
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold leading-tight">Gerencie Suas
 Finanças Pessoais
-Com Inteligência<span className="block bg-gradient-hero bg-clip-text animate-glow text-blue-600">Finanças Pessoais</span>
+Com Inteligência<span className="block bg-gradient-hero bg-clip-text animate-glow text-blue-600 py-0 px-0 mr-[410px]">Finanças Pessoais</span>
               com inteligência
             </h1>
 
