@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, RefreshCw, Trash2, Building2, CreditCard, Wallet, Loader2, Clock } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Trash2, Building2, CreditCard, Wallet, Loader2, Clock, ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
@@ -48,15 +48,23 @@ export default function BankConnections() {
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [pendingReviewCount, setPendingReviewCount] = useState(0);
 
   const fetchConnections = useCallback(async () => {
     try {
-      const response = await supabase.functions.invoke('pluggy', {
-        body: { action: 'get_connections' },
-      });
+      const [connectionsRes, reviewCountRes] = await Promise.all([
+        supabase.functions.invoke('pluggy', {
+          body: { action: 'get_connections' },
+        }),
+        supabase
+          .from('transactions')
+          .select('id', { count: 'exact', head: true })
+          .eq('needs_review', true),
+      ]);
 
-      if (response.error) throw response.error;
-      setConnections(response.data.connections || []);
+      if (connectionsRes.error) throw connectionsRes.error;
+      setConnections(connectionsRes.data.connections || []);
+      setPendingReviewCount(reviewCountRes.count || 0);
     } catch (error) {
       console.error('Error fetching connections:', error);
       toast.error('Erro ao carregar conexões bancárias');
@@ -199,8 +207,14 @@ export default function BankConnections() {
               Conecte sua conta bancária para importar transações automaticamente
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex flex-wrap gap-4">
             <PluggyConnectWidget onSuccess={handleConnectionSuccess} />
+            {pendingReviewCount > 0 && (
+              <Button variant="outline" onClick={() => navigate('/review-transactions')} className="gap-2">
+                <ClipboardList className="h-4 w-4" />
+                Revisar Transações ({pendingReviewCount})
+              </Button>
+            )}
           </CardContent>
         </Card>
 
