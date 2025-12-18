@@ -135,6 +135,19 @@ export default function Settings() {
 
     setChangingPassword(true);
     try {
+      // First verify current password by attempting to sign in
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: currentPassword,
+      });
+
+      if (signInError) {
+        setPasswordErrors({ currentPassword: "Senha atual incorreta" });
+        setChangingPassword(false);
+        return;
+      }
+
+      // Now update the password
       const { error } = await supabase.auth.updateUser({
         password: newPassword,
       });
