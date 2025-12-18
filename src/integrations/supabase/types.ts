@@ -313,6 +313,7 @@ export type Database = {
           date: string
           description: string
           id: number
+          needs_review: boolean | null
           type: string
           updated_at: string | null
           user_id: string
@@ -325,6 +326,7 @@ export type Database = {
           date: string
           description: string
           id?: number
+          needs_review?: boolean | null
           type: string
           updated_at?: string | null
           user_id: string
@@ -337,6 +339,7 @@ export type Database = {
           date?: string
           description?: string
           id?: number
+          needs_review?: boolean | null
           type?: string
           updated_at?: string | null
           user_id?: string
