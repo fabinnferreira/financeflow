@@ -21,6 +21,74 @@ interface PluggyConnectToken {
   accessToken: string;
 }
 
+// Category mapping based on transaction description keywords
+const CATEGORY_KEYWORDS: Record<string, string[]> = {
+  'Alimentação': [
+    'ifood', 'uber eats', 'rappi', 'restaurante', 'lanchonete', 'pizzaria',
+    'padaria', 'açougue', 'mercado', 'supermercado', 'carrefour', 'extra',
+    'pão de açúcar', 'assai', 'atacadão', 'hortifruti', 'café', 'coffee',
+    'mcdonalds', 'burger king', 'subway', 'starbucks', 'habib', 'sushi'
+  ],
+  'Transporte': [
+    'uber', '99', 'taxi', 'cabify', 'combustivel', 'combustível', 'gasolina',
+    'posto', 'ipiranga', 'shell', 'petrobras', 'br distribuidora', 'estacionamento',
+    'parking', 'sem parar', 'conectcar', 'veloe', 'pedagio', 'pedágio', 'metro',
+    'metrô', 'ônibus', 'onibus', 'trem', 'passagem'
+  ],
+  'Moradia': [
+    'aluguel', 'condominio', 'condomínio', 'iptu', 'luz', 'energia', 'enel',
+    'cemig', 'copel', 'celesc', 'agua', 'água', 'sabesp', 'copasa', 'sanepar',
+    'gás', 'gas', 'comgas', 'internet', 'fibra', 'net', 'vivo fibra', 'claro net'
+  ],
+  'Telefone': [
+    'vivo', 'tim', 'claro', 'oi', 'nextel', 'telefone', 'celular', 'recarga'
+  ],
+  'Lazer': [
+    'netflix', 'spotify', 'amazon prime', 'disney', 'hbo', 'globoplay', 'deezer',
+    'youtube', 'cinema', 'ingresso', 'teatro', 'show', 'evento', 'parque',
+    'xbox', 'playstation', 'steam', 'games', 'jogos'
+  ],
+  'Saúde': [
+    'farmacia', 'farmácia', 'drogaria', 'droga', 'hospital', 'clinica', 'clínica',
+    'medico', 'médico', 'dentista', 'laboratorio', 'laboratório', 'exame',
+    'consulta', 'plano de saude', 'plano de saúde', 'unimed', 'bradesco saude',
+    'amil', 'sulamerica'
+  ],
+  'Educação': [
+    'escola', 'faculdade', 'universidade', 'curso', 'udemy', 'alura', 'coursera',
+    'udacity', 'duolingo', 'livro', 'livraria', 'saraiva', 'cultura', 'apostila',
+    'mensalidade', 'matricula', 'matrícula'
+  ],
+  'Compras': [
+    'amazon', 'mercado livre', 'magalu', 'magazine luiza', 'americanas', 'shopee',
+    'aliexpress', 'shein', 'renner', 'riachuelo', 'c&a', 'zara', 'centauro',
+    'netshoes', 'casas bahia', 'ponto frio'
+  ],
+  'Salário': [
+    'salario', 'salário', 'folha', 'pgto', 'pagamento', 'deposito', 'depósito',
+    'transferencia recebida', 'pix recebido', 'ted recebido', 'doc recebido'
+  ],
+  'Investimentos': [
+    'rendimento', 'dividendo', 'jcp', 'juros sobre capital', 'fii', 'cdb',
+    'tesouro', 'lci', 'lca', 'fundo', 'ação', 'acao', 'etf', 'cripto', 'bitcoin'
+  ],
+};
+
+function detectCategory(description: string): string | null {
+  const normalizedDescription = description.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  
+  for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
+    for (const keyword of keywords) {
+      const normalizedKeyword = keyword.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      if (normalizedDescription.includes(normalizedKeyword)) {
+        return category;
+      }
+    }
+  }
+  
+  return null;
+}
+
 async function getPluggyApiKey(): Promise<string> {
   console.log('Authenticating with Pluggy API...');
   const response = await fetch(`${PLUGGY_API_URL}/auth`, {
@@ -135,22 +203,27 @@ async function syncTransactionsToDatabase(
   userId: string,
   pluggyAccountId: string,
   localAccountId: number,
-  transactions: any[]
+  transactions: any[],
+  markForReview: boolean = true
 ) {
   console.log(`Syncing ${transactions.length} transactions to database...`);
   
-  // Get default category for the user (use "Outros" expense category)
-  const { data: defaultCategory } = await supabase
+  // Get all user categories for auto-detection
+  const { data: userCategories } = await supabase
     .from('categories')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('name', 'Outros')
-    .eq('type', 'expense')
-    .single();
+    .select('id, name, type')
+    .eq('user_id', userId);
 
-  const defaultCategoryId = defaultCategory?.id;
+  const categoryMap = new Map<string, { id: number; type: string }>();
+  for (const cat of (userCategories || [])) {
+    categoryMap.set(cat.name, { id: cat.id, type: cat.type });
+  }
 
-  if (!defaultCategoryId) {
+  // Get default category for the user (use "Outros" expense category)
+  const defaultExpenseCategory = categoryMap.get('Outros');
+  const defaultIncomeCategory = userCategories?.find((c: any) => c.type === 'income');
+
+  if (!defaultExpenseCategory) {
     console.error('No default category found for user');
     throw new Error('Default category not found');
   }
@@ -169,20 +242,47 @@ async function syncTransactionsToDatabase(
   );
 
   const newTransactions = [];
+  let autoDetectedCount = 0;
+
   for (const t of transactions) {
     const amountCents = Math.round(Math.abs(t.amount) * 100);
     const type = t.amount < 0 ? 'expense' : 'income';
     const key = `${t.description}_${t.date}_${amountCents}`;
 
     if (!existingSet.has(key)) {
+      // Try to auto-detect category
+      let categoryId: number;
+      let needsReview = markForReview;
+      const detectedCategoryName = detectCategory(t.description || '');
+      
+      if (detectedCategoryName) {
+        const detectedCategory = categoryMap.get(detectedCategoryName);
+        if (detectedCategory && detectedCategory.type === type) {
+          categoryId = detectedCategory.id;
+          needsReview = false; // Auto-detected, no need for review
+          autoDetectedCount++;
+        } else {
+          // Category exists but wrong type, use default
+          categoryId = type === 'income' 
+            ? (defaultIncomeCategory?.id || defaultExpenseCategory.id)
+            : defaultExpenseCategory.id;
+        }
+      } else {
+        // No category detected, use default
+        categoryId = type === 'income' 
+          ? (defaultIncomeCategory?.id || defaultExpenseCategory.id)
+          : defaultExpenseCategory.id;
+      }
+
       newTransactions.push({
         user_id: userId,
         account_id: localAccountId,
-        category_id: defaultCategoryId,
+        category_id: categoryId,
         description: t.description || 'Transação Open Banking',
         amount_cents: amountCents,
         type,
         date: t.date,
+        needs_review: needsReview,
       });
     }
   }
@@ -196,12 +296,17 @@ async function syncTransactionsToDatabase(
       console.error('Error inserting transactions:', error);
       throw error;
     }
-    console.log(`Inserted ${newTransactions.length} new transactions`);
+    console.log(`Inserted ${newTransactions.length} new transactions (${autoDetectedCount} auto-categorized)`);
   } else {
     console.log('No new transactions to insert');
   }
 
-  return { inserted: newTransactions.length, total: transactions.length };
+  return { 
+    inserted: newTransactions.length, 
+    total: transactions.length,
+    autoDetected: autoDetectedCount,
+    needsReview: newTransactions.length - autoDetectedCount
+  };
 }
 
 serve(async (req) => {
@@ -311,7 +416,7 @@ serve(async (req) => {
       }
 
       case 'sync_transactions': {
-        const { connectionId, from, to } = params;
+        const { connectionId, from, to, markForReview = true } = params;
         
         // Get the bank connection
         const { data: connection, error: connError } = await supabaseClient
@@ -333,6 +438,8 @@ serve(async (req) => {
 
         let totalInserted = 0;
         let totalTransactions = 0;
+        let totalAutoDetected = 0;
+        let totalNeedsReview = 0;
 
         for (const pAccount of (pluggyAccounts || [])) {
           if (!pAccount.local_account_id) continue;
@@ -350,11 +457,14 @@ serve(async (req) => {
             userId,
             pAccount.pluggy_account_id,
             pAccount.local_account_id,
-            transactions
+            transactions,
+            markForReview
           );
 
           totalInserted += syncResult.inserted;
           totalTransactions += syncResult.total;
+          totalAutoDetected += syncResult.autoDetected;
+          totalNeedsReview += syncResult.needsReview;
 
           // Update account balance
           const latestBalance = transactions.length > 0 
@@ -386,7 +496,9 @@ serve(async (req) => {
         result = { 
           inserted: totalInserted, 
           total: totalTransactions,
-          message: `Sincronizadas ${totalInserted} novas transações de ${totalTransactions} encontradas`
+          autoDetected: totalAutoDetected,
+          needsReview: totalNeedsReview,
+          message: `Sincronizadas ${totalInserted} novas transações (${totalAutoDetected} categorizadas automaticamente, ${totalNeedsReview} para revisão)`
         };
         break;
       }

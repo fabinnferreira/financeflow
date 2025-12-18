@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.pluggy]
 verify_jwt = false
+
+[functions.sync-bank-transactions]
+verify_jwt = false
