@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowUpRight, ArrowDownRight, Wallet, CreditCard, TrendingUp, Plus, LogOut, FolderKanban, Calendar, Settings, Target, BarChart3, Building2 } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Wallet, CreditCard, TrendingUp, Plus, LogOut, Calendar, Settings } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -16,6 +16,7 @@ import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYea
 import DynamicBackground from "@/components/DynamicBackground";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { NotificationCenter } from "@/components/NotificationCenter";
+import { DashboardNav } from "@/components/DashboardNav";
 
 interface CategoryTotal {
   category_id: number;
@@ -196,61 +197,33 @@ const Dashboard = () => {
       <DynamicBackground />
 
       <div className="relative z-10">
-        <header className="backdrop-blur-lg text-primary-foreground py-6 shadow-lg bg-[#1e232d]">
+        <header className="backdrop-blur-lg text-primary-foreground py-4 md:py-6 shadow-lg bg-[#1e232d]">
           <div className="container mx-auto px-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-slate-50">FinanceFlow</h1>
-                <p className="text-sm text-[#1cbb56]">Olá, {userName}! 👋</p>
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <h1 className="text-xl md:text-2xl font-bold text-slate-50 truncate">FinanceFlow</h1>
+                <p className="text-sm text-[#1cbb56] truncate">Olá, {userName}! 👋</p>
               </div>
               
-              <div className="flex gap-3 bg-transparent rounded-lg">
-                <Button variant="outline" size="lg" onClick={() => navigate("/transactions")} className="gap-2 border-primary-foreground/30 hover:bg-primary-foreground/20 text-[#17ab4e] font-extralight">
-                  <CreditCard className="w-5 h-5" />
-                  Transações
-                </Button>
-                
-                <Button variant="outline" size="lg" onClick={() => navigate("/categories")} className="gap-2 border-primary-foreground/30 hover:bg-primary-foreground/20 text-[#17ab4e] font-extralight">
-                  <FolderKanban className="w-5 h-5" />
-                  Categorias
-                </Button>
-                
-                <Button variant="outline" size="lg" onClick={() => navigate("/accounts")} className="gap-2 border-primary-foreground/30 hover:bg-primary-foreground/20 text-base text-[#18af50]">
-                  <Wallet className="w-5 h-5" />
-                  Contas
-                </Button>
-                
-                <Button variant="outline" size="lg" onClick={() => navigate("/goals")} className="gap-2 border-primary-foreground/30 hover:bg-primary-foreground/20 text-[#17ab4e] font-extralight">
-                  <Target className="w-5 h-5" />
-                  Metas
-                </Button>
-                
-                <Button variant="outline" size="lg" onClick={() => navigate("/reports")} className="gap-2 border-primary-foreground/30 hover:bg-primary-foreground/20 text-[#17ab4e] font-extralight">
-                  <BarChart3 className="w-5 h-5" />
-                  Relatórios
-                </Button>
-                
-                <Button variant="outline" size="lg" onClick={() => navigate("/bank-connections")} className="gap-2 border-primary-foreground/30 hover:bg-primary-foreground/20 text-[#17ab4e] font-extralight">
-                  <Building2 className="w-5 h-5" />
-                  Open Banking
-                </Button>
-                
-                <Button variant="success" size="lg" className="gap-2" onClick={() => setDialogOpen(true)}>
-                  <Plus className="w-5 h-5" />
-                  Nova Transação
-                </Button>
+              <div className="flex items-center gap-2">
+                <DashboardNav 
+                  onNewTransaction={() => setDialogOpen(true)} 
+                  onSignOut={handleSignOut} 
+                />
                 
                 <NotificationCenter />
-                
                 <ThemeToggle />
                 
-                <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-foreground/20" onClick={() => navigate("/settings")} title="Configurações">
-                  <Settings className="w-5 h-5" />
-                </Button>
-                
-                <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-foreground/20" onClick={handleSignOut} title="Sair">
-                  <LogOut className="w-5 h-5" />
-                </Button>
+                {/* Desktop only settings/logout */}
+                <div className="hidden lg:flex items-center gap-1">
+                  <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-foreground/20" onClick={() => navigate("/settings")} title="Configurações">
+                    <Settings className="w-5 h-5" />
+                  </Button>
+                  
+                  <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-foreground/20" onClick={handleSignOut} title="Sair">
+                    <LogOut className="w-5 h-5" />
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
