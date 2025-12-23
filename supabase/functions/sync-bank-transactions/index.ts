@@ -131,21 +131,45 @@ async function syncTransactionsForUser(
   console.log(`[CronSync] Syncing transactions for user ${userId}, account ${pluggyAccount.pluggy_account_id}`);
 
   // Get user categories
-  const { data: userCategories } = await supabase
+  let { data: userCategories } = await supabase
     .from('categories')
     .select('id, name, type')
     .eq('user_id', userId);
 
-  const categoryMap = new Map<string, { id: number; type: string }>();
-  for (const cat of (userCategories || [])) {
-    categoryMap.set(cat.name, { id: cat.id, type: cat.type });
+  // Ensure default categories exist
+  const hasOutrosExpense = userCategories?.some((c: any) => c.name === 'Outros' && c.type === 'expense');
+  const hasOutrosIncome = userCategories?.some((c: any) => c.name === 'Outros' && c.type === 'income');
+
+  if (!hasOutrosExpense) {
+    console.log(`[CronSync] Creating default expense category for user ${userId}`);
+    const { data: newCat } = await supabase
+      .from('categories')
+      .insert({ user_id: userId, name: 'Outros', type: 'expense', emoji: '📦', color: '#6b7280' })
+      .select()
+      .single();
+    if (newCat) userCategories = [...(userCategories || []), newCat];
   }
 
-  const defaultExpenseCategory = categoryMap.get('Outros');
-  const defaultIncomeCategory = userCategories?.find((c: any) => c.type === 'income');
+  if (!hasOutrosIncome) {
+    console.log(`[CronSync] Creating default income category for user ${userId}`);
+    const { data: newCat } = await supabase
+      .from('categories')
+      .insert({ user_id: userId, name: 'Outros', type: 'income', emoji: '💰', color: '#22c55e' })
+      .select()
+      .single();
+    if (newCat) userCategories = [...(userCategories || []), newCat];
+  }
 
-  if (!defaultExpenseCategory) {
-    console.log(`[CronSync] No default category for user ${userId}, skipping`);
+  const categoryMap = new Map<string, { id: number; type: string }>();
+  for (const cat of (userCategories || [])) {
+    categoryMap.set(`${cat.name}_${cat.type}`, { id: cat.id, type: cat.type });
+  }
+
+  const defaultExpenseCategory = userCategories?.find((c: any) => c.name === 'Outros' && c.type === 'expense');
+  const defaultIncomeCategory = userCategories?.find((c: any) => c.name === 'Outros' && c.type === 'income');
+
+  if (!defaultExpenseCategory || !defaultIncomeCategory) {
+    console.log(`[CronSync] No default categories for user ${userId}, skipping`);
     return { inserted: 0, total: 0 };
   }
 

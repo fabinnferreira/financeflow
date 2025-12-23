@@ -46,6 +46,7 @@ interface Transaction {
   date: string;
   account_id: number;
   category_id: number;
+  needs_review?: boolean;
   categories: {
     id: number;
     name: string;
@@ -95,6 +96,7 @@ export default function Transactions() {
       .from("transactions")
       .select("*, categories(id, name, emoji)")
       .eq("user_id", user.id)
+      .order("needs_review", { ascending: false, nullsFirst: false })
       .order("date", { ascending: false });
 
     if (error) {
@@ -249,13 +251,20 @@ export default function Transactions() {
           </TableRow>
         ) : (
           filteredByType.map((transaction) => (
-            <TableRow key={transaction.id}>
+            <TableRow key={transaction.id} className={transaction.needs_review ? "bg-warning/10" : ""}>
               <TableCell>
-                {transaction.type === "income" ? (
-                  <ArrowUpRight className="h-4 w-4 text-success" />
-                ) : (
-                  <ArrowDownRight className="h-4 w-4 text-destructive" />
-                )}
+                <div className="flex items-center gap-1">
+                  {transaction.type === "income" ? (
+                    <ArrowUpRight className="h-4 w-4 text-success" />
+                  ) : (
+                    <ArrowDownRight className="h-4 w-4 text-destructive" />
+                  )}
+                  {transaction.needs_review && (
+                    <Badge variant="outline" className="text-xs bg-warning/20 text-warning-foreground border-warning">
+                      Revisar
+                    </Badge>
+                  )}
+                </div>
               </TableCell>
               <TableCell className="font-medium">{transaction.description}</TableCell>
               <TableCell className={transaction.type === "income" ? "text-success" : "text-destructive"}>

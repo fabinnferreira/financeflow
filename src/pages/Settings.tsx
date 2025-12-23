@@ -169,13 +169,19 @@ export default function Settings() {
   const handleDeleteAccount = async () => {
     setDeleting(true);
     try {
-      // Sign out and redirect - actual deletion would need an edge function
-      await supabase.auth.signOut();
-      toast.success("Você foi desconectado. Entre em contato com o suporte para deletar sua conta permanentemente.");
+      // Call the delete-user-account edge function
+      const { data, error } = await supabase.functions.invoke('delete-user-account');
+      
+      if (error) {
+        console.error("Delete account error:", error);
+        throw new Error(error.message || 'Erro ao deletar conta');
+      }
+
+      toast.success("Sua conta foi excluída permanentemente.");
       navigate("/");
     } catch (error: any) {
       console.error("Error:", error);
-      toast.error("Erro ao processar solicitação");
+      toast.error(error.message || "Erro ao deletar conta");
     } finally {
       setDeleting(false);
     }
