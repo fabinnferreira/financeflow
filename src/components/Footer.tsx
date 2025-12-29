@@ -1,7 +1,7 @@
 import { Heart } from "lucide-react";
 const Footer = () => {
   return <footer className="bg-primary text-primary-foreground py-12">
-      <div className="container mx-auto px-4 bg-transparent">
+      <div className="container mx-auto px-4 bg-[#0f1629]">
         <div className="grid md:grid-cols-4 gap-8 mb-8 bg-transparent">
           <div className="space-y-4">
             <h3 className="text-2xl font-bold text-zinc-50">FinanceFlow</h3>
