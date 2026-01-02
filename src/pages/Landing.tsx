@@ -7,7 +7,7 @@ const Landing = () => {
       <Hero />
       <Features />
       <Pricing />
-      <Footer />
+      <Footer className="bg-muted-foreground" />
     </div>;
 };
 export default Landing;
