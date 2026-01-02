@@ -41,7 +41,7 @@ const Features = () => {
   return <section id="recursos" className="py-24 bg-secondary/30">
       <div className="container mx-auto px-4">
         <div className="text-center mb-16 animate-fade-in">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-4">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 mb-4 border-primary-light border-2">
             <span className="text-sm font-medium text-secondary">Recursos Principais</span>
           </div>
           
