@@ -7,7 +7,7 @@ const Landing = () => {
       <Hero />
       <Features />
       <Pricing />
-      <Footer className="bg-muted-foreground" />
+      <Footer className="text-secondary bg-slate-900" />
     </div>;
 };
 export default Landing;
