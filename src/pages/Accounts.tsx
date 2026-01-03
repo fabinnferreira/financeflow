@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { PlusCircle, Edit, Trash, Landmark, CreditCard, Wallet, Loader2 } from 'lucide-react';
+import { PlusCircle, Edit, Trash, Landmark, CreditCard, Wallet, Loader2, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -33,10 +34,13 @@ interface Account {
 }
 
 const Accounts = () => {
+  const navigate = useNavigate();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     type: 'bank',
@@ -65,6 +69,10 @@ const Accounts = () => {
   useEffect(() => {
     fetchAccounts();
   }, []);
+
+  const resetForm = () => {
+    setFormData({ name: '', type: 'bank', balance: '0' });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,7 +107,7 @@ const Accounts = () => {
 
       toast.success('Conta criada com sucesso!');
       setDialogOpen(false);
-      setFormData({ name: '', type: 'bank', balance: '0' });
+      resetForm();
       fetchAccounts();
     } catch (error: any) {
       console.error("Error creating account:", error);
@@ -109,8 +117,69 @@ const Accounts = () => {
     }
   };
 
+  const handleEdit = (account: Account) => {
+    setEditingAccount(account);
+    setFormData({
+      name: account.name,
+      type: account.type,
+      balance: (account.balance_cents / 100).toString()
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!editingAccount) return;
+
+    const validation = accountSchema.safeParse(formData);
+    if (!validation.success) {
+      const firstError = validation.error.errors[0];
+      toast.error(firstError.message);
+      return;
+    }
+    
+    try {
+      setIsSubmitting(true);
+      const balance_cents = Math.round(parseFloat(formData.balance) * 100);
+
+      const { error } = await supabase
+        .from('accounts')
+        .update({
+          name: formData.name,
+          type: formData.type,
+          balance_cents
+        })
+        .eq('id', editingAccount.id);
+
+      if (error) throw error;
+
+      toast.success('Conta atualizada com sucesso!');
+      setEditDialogOpen(false);
+      setEditingAccount(null);
+      resetForm();
+      fetchAccounts();
+    } catch (error: any) {
+      console.error("Error updating account:", error);
+      toast.error('Erro ao atualizar conta');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleDelete = async (id: number) => {
     try {
+      // Check if account has transactions
+      const { count } = await supabase
+        .from('transactions')
+        .select('*', { count: 'exact', head: true })
+        .eq('account_id', id);
+
+      if (count && count > 0) {
+        toast.error('Não é possível excluir uma conta com transações associadas');
+        return;
+      }
+
       const { error } = await supabase
         .from('accounts')
         .delete()
@@ -145,6 +214,67 @@ const Accounts = () => {
       currency: 'BRL'
     }).format(cents / 100);
   };
+
+  const AccountForm = ({ onSubmit, submitLabel }: { onSubmit: (e: React.FormEvent) => void; submitLabel: string }) => (
+    <form onSubmit={onSubmit} className="space-y-4">
+      <div>
+        <Label htmlFor="name">Nome da Conta</Label>
+        <Input
+          id="name"
+          value={formData.name}
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          required
+        />
+      </div>
+      <div>
+        <Label htmlFor="type">Tipo</Label>
+        <Select
+          value={formData.type}
+          onValueChange={(value) => setFormData({ ...formData, type: value })}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="bank">Conta Bancária</SelectItem>
+            <SelectItem value="credit_card">Cartão de Crédito</SelectItem>
+            <SelectItem value="cash">Dinheiro</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <Label htmlFor="balance">Saldo {editingAccount ? 'Atual' : 'Inicial'}</Label>
+        <Input
+          id="balance"
+          type="number"
+          step="0.01"
+          value={formData.balance}
+          onChange={(e) => setFormData({ ...formData, balance: e.target.value })}
+          required
+        />
+      </div>
+      <div className="flex gap-3 pt-4">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            setDialogOpen(false);
+            setEditDialogOpen(false);
+            resetForm();
+            setEditingAccount(null);
+          }}
+          className="flex-1"
+          disabled={isSubmitting}
+        >
+          Cancelar
+        </Button>
+        <Button type="submit" variant="success" className="flex-1" disabled={isSubmitting}>
+          {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {submitLabel}
+        </Button>
+      </div>
+    </form>
+  );
 
   const renderAccountCards = (type: string) => {
     const filteredAccounts = accounts.filter(account => account.type === type);
@@ -183,6 +313,7 @@ const Accounts = () => {
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8"
+                  onClick={() => handleEdit(account)}
                 >
                   <Edit className="h-4 w-4" />
                 </Button>
@@ -229,8 +360,20 @@ const Accounts = () => {
       <DynamicBackground />
       <div className="max-w-7xl mx-auto relative z-10">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-4xl font-bold">Minhas Contas</h1>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate('/dashboard')}
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="text-4xl font-bold">Minhas Contas</h1>
+          </div>
+          <Dialog open={dialogOpen} onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) resetForm();
+          }}>
             <DialogTrigger asChild>
               <Button>
                 <PlusCircle className="mr-2 h-4 w-4" />
@@ -240,52 +383,33 @@ const Accounts = () => {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Adicionar Nova Conta</DialogTitle>
+                <DialogDescription>
+                  Adicione uma nova conta para organizar suas finanças
+                </DialogDescription>
               </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <Label htmlFor="name">Nome da Conta</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="type">Tipo</Label>
-                  <Select
-                    value={formData.type}
-                    onValueChange={(value) => setFormData({ ...formData, type: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="bank">Conta Bancária</SelectItem>
-                      <SelectItem value="credit_card">Cartão de Crédito</SelectItem>
-                      <SelectItem value="cash">Dinheiro</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="balance">Saldo Inicial</Label>
-                  <Input
-                    id="balance"
-                    type="number"
-                    step="0.01"
-                    value={formData.balance}
-                    onChange={(e) => setFormData({ ...formData, balance: e.target.value })}
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={isSubmitting}>
-                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Criar Conta
-                </Button>
-              </form>
+              <AccountForm onSubmit={handleSubmit} submitLabel="Criar" />
             </DialogContent>
           </Dialog>
         </div>
+
+        {/* Edit Dialog */}
+        <Dialog open={editDialogOpen} onOpenChange={(open) => {
+          setEditDialogOpen(open);
+          if (!open) {
+            resetForm();
+            setEditingAccount(null);
+          }
+        }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Conta</DialogTitle>
+              <DialogDescription>
+                Atualize os dados da conta
+              </DialogDescription>
+            </DialogHeader>
+            <AccountForm onSubmit={handleEditSubmit} submitLabel="Salvar" />
+          </DialogContent>
+        </Dialog>
 
         <Tabs defaultValue="bank" className="w-full animate-fade-in">
           <TabsList className="grid w-full grid-cols-3">

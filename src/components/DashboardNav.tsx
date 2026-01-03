@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,7 +15,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Menu, CreditCard, FolderKanban, Wallet, Target, BarChart3, Building2, Plus, Settings, LogOut } from "lucide-react";
+import { Menu, CreditCard, FolderKanban, Wallet, Target, BarChart3, Building2, Plus, Settings, LogOut, Shield } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface DashboardNavProps {
   onNewTransaction: () => void;
@@ -25,6 +26,29 @@ interface DashboardNavProps {
 export function DashboardNav({ onNewTransaction, onSignOut }: DashboardNavProps) {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    checkAdminRole();
+  }, []);
+
+  const checkAdminRole = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "admin")
+        .maybeSingle();
+
+      setIsAdmin(!!data);
+    } catch (error) {
+      console.error("Error checking admin role:", error);
+    }
+  };
 
   const navItems = [
     { label: "Transações", icon: CreditCard, path: "/transactions" },
@@ -56,6 +80,17 @@ export function DashboardNav({ onNewTransaction, onSignOut }: DashboardNavProps)
             {item.label}
           </Button>
         ))}
+        {isAdmin && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate("/admin")}
+            className="gap-2 border-warning/50 hover:bg-warning/20 text-warning"
+          >
+            <Shield className="w-4 h-4" />
+            Admin
+          </Button>
+        )}
         <Button variant="success" size="sm" className="gap-2" onClick={onNewTransaction}>
           <Plus className="w-4 h-4" />
           Nova Transação
@@ -78,6 +113,15 @@ export function DashboardNav({ onNewTransaction, onSignOut }: DashboardNavProps)
                 {item.label}
               </DropdownMenuItem>
             ))}
+            {isAdmin && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate("/admin")} className="text-warning">
+                  <Shield className="w-4 h-4 mr-2" />
+                  Admin
+                </DropdownMenuItem>
+              </>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => navigate("/settings")}>
               <Settings className="w-4 h-4 mr-2" />
@@ -122,6 +166,16 @@ export function DashboardNav({ onNewTransaction, onSignOut }: DashboardNavProps)
                   {item.label}
                 </Button>
               ))}
+              {isAdmin && (
+                <Button
+                  variant="ghost"
+                  className="justify-start gap-3 text-warning hover:text-warning"
+                  onClick={() => handleNavigate("/admin")}
+                >
+                  <Shield className="w-5 h-5" />
+                  Admin
+                </Button>
+              )}
               <hr className="my-2" />
               <Button
                 variant="ghost"
