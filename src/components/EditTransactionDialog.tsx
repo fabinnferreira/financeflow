@@ -134,6 +134,7 @@ export function EditTransactionDialog({ open, onOpenChange, onSuccess, transacti
           account_id: parseInt(formData.account_id),
           category_id: parseInt(formData.category_id),
           date: new Date(formData.date).toISOString(),
+          needs_review: false, // Clear needs_review flag when editing
         })
         .eq("id", transaction.id);
 
