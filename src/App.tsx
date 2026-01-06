@@ -14,6 +14,7 @@ import Reports from "./pages/Reports";
 import BankConnections from "./pages/BankConnections";
 import ReviewTransactions from "./pages/ReviewTransactions";
 import Admin from "./pages/Admin";
+import CreditCards from "./pages/CreditCards";
 import AuthPage from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -77,6 +78,11 @@ const App = () => (
           <Route path="/admin" element={
             <ProtectedRoute>
               <Admin />
+            </ProtectedRoute>
+          } />
+          <Route path="/credit-cards" element={
+            <ProtectedRoute>
+              <CreditCards />
             </ProtectedRoute>
           } />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
