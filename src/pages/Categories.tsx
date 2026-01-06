@@ -176,6 +176,19 @@ const Categories = () => {
 
   const handleDelete = async (id: number) => {
     try {
+      // Check if there are transactions associated with this category
+      const { count, error: countError } = await supabase
+        .from("transactions")
+        .select("*", { count: "exact", head: true })
+        .eq("category_id", id);
+
+      if (countError) throw countError;
+
+      if (count && count > 0) {
+        toast.error(`Não é possível excluir esta categoria. Existem ${count} transação(ões) associada(s).`);
+        return;
+      }
+
       const { error } = await supabase
         .from("categories")
         .delete()
