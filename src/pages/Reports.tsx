@@ -3,7 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowUpRight, ArrowDownRight, ArrowLeft, TrendingUp, TrendingDown, BarChart3 } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { ArrowUpRight, ArrowDownRight, ArrowLeft, TrendingUp, TrendingDown, BarChart3, Download, FileText, FileSpreadsheet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { PieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, ResponsiveContainer, AreaChart, Area } from "recharts";
@@ -12,6 +13,9 @@ import { startOfMonth, endOfMonth, subMonths, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import DynamicBackground from "@/components/DynamicBackground";
 import { toast } from "sonner";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 
 interface MonthlyData {
   month: string;
@@ -149,6 +153,192 @@ const Reports = () => {
     }).format(value);
   };
 
+  const getPeriodLabel = () => {
+    switch (monthsToShow) {
+      case "3": return "Últimos 3 meses";
+      case "6": return "Últimos 6 meses";
+      case "12": return "Último ano";
+      default: return `Últimos ${monthsToShow} meses`;
+    }
+  };
+
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFontSize(20);
+    doc.setTextColor(30, 35, 45);
+    doc.text("FinanceFlow", 14, 20);
+    
+    doc.setFontSize(12);
+    doc.setTextColor(100);
+    doc.text("Relatório Financeiro", 14, 28);
+    doc.text(`Período: ${getPeriodLabel()}`, 14, 35);
+    doc.text(`Gerado em: ${new Date().toLocaleDateString("pt-BR")}`, 14, 42);
+
+    // Summary
+    doc.setFontSize(14);
+    doc.setTextColor(30, 35, 45);
+    doc.text("Resumo Financeiro", 14, 55);
+    
+    doc.setFontSize(11);
+    doc.setTextColor(16, 185, 129);
+    doc.text(`Total de Receitas: ${formatCurrency(totalIncome)}`, 14, 65);
+    
+    doc.setTextColor(239, 68, 68);
+    doc.text(`Total de Despesas: ${formatCurrency(totalExpenses)}`, 14, 72);
+    
+    const balanceColor = totalBalance >= 0 ? [16, 185, 129] : [239, 68, 68];
+    doc.setTextColor(balanceColor[0], balanceColor[1], balanceColor[2]);
+    doc.text(`Balanço: ${formatCurrency(totalBalance)}`, 14, 79);
+
+    doc.setTextColor(100);
+    doc.text(`Taxa de Poupança: ${totalIncome > 0 ? Math.round((totalBalance / totalIncome) * 100) : 0}%`, 14, 86);
+
+    // Monthly Data Table
+    doc.setFontSize(14);
+    doc.setTextColor(30, 35, 45);
+    doc.text("Evolução Mensal", 14, 100);
+
+    const monthlyTableData = monthlyData.map((m) => [
+      m.month,
+      formatCurrency(m.income),
+      formatCurrency(m.expense),
+      formatCurrency(m.balance)
+    ]);
+
+    autoTable(doc, {
+      startY: 105,
+      head: [["Mês", "Receitas", "Despesas", "Balanço"]],
+      body: monthlyTableData,
+      theme: "striped",
+      headStyles: {
+        fillColor: [30, 35, 45],
+        textColor: [255, 255, 255],
+        fontStyle: "bold",
+      },
+      alternateRowStyles: {
+        fillColor: [245, 247, 250],
+      },
+      styles: {
+        fontSize: 10,
+        cellPadding: 4,
+      },
+    });
+
+    // Category Expenses Table
+    if (categoryTotals.length > 0) {
+      const finalY = (doc as any).lastAutoTable.finalY || 150;
+      
+      doc.setFontSize(14);
+      doc.setTextColor(30, 35, 45);
+      doc.text("Despesas por Categoria", 14, finalY + 15);
+
+      const categoryTableData = categoryTotals.map((cat) => [
+        `${cat.emoji} ${cat.name}`,
+        formatCurrency(cat.amount),
+        `${((cat.amount / totalExpenses) * 100).toFixed(1)}%`
+      ]);
+
+      autoTable(doc, {
+        startY: finalY + 20,
+        head: [["Categoria", "Valor", "% do Total"]],
+        body: categoryTableData,
+        theme: "striped",
+        headStyles: {
+          fillColor: [30, 35, 45],
+          textColor: [255, 255, 255],
+          fontStyle: "bold",
+        },
+      });
+    }
+
+    // Footer
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(150);
+      doc.text(
+        `Página ${i} de ${pageCount} - FinanceFlow`,
+        doc.internal.pageSize.getWidth() / 2,
+        doc.internal.pageSize.getHeight() - 10,
+        { align: "center" }
+      );
+    }
+
+    doc.save(`relatorio-financeiro-${format(new Date(), "yyyy-MM-dd")}.pdf`);
+    toast.success("Relatório PDF exportado com sucesso!");
+  };
+
+  const handleExportExcel = () => {
+    const workbook = XLSX.utils.book_new();
+
+    // Summary Sheet
+    const summaryData = [
+      ["FinanceFlow - Relatório Financeiro"],
+      [""],
+      ["Período", getPeriodLabel()],
+      ["Gerado em", new Date().toLocaleDateString("pt-BR")],
+      [""],
+      ["Resumo Financeiro"],
+      ["Total de Receitas", formatCurrency(totalIncome)],
+      ["Total de Despesas", formatCurrency(totalExpenses)],
+      ["Balanço", formatCurrency(totalBalance)],
+      ["Taxa de Poupança", `${totalIncome > 0 ? Math.round((totalBalance / totalIncome) * 100) : 0}%`],
+      ["Média Mensal Receitas", formatCurrency(avgMonthlyIncome)],
+      ["Média Mensal Despesas", formatCurrency(avgMonthlyExpense)],
+    ];
+
+    const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+    summarySheet["!cols"] = [{ wch: 25 }, { wch: 20 }];
+    XLSX.utils.book_append_sheet(workbook, summarySheet, "Resumo");
+
+    // Monthly Data Sheet
+    const monthlyHeaders = ["Mês", "Receitas", "Despesas", "Balanço"];
+    const monthlyRows = monthlyData.map((m) => [
+      m.month,
+      m.income.toFixed(2),
+      m.expense.toFixed(2),
+      m.balance.toFixed(2)
+    ]);
+
+    const monthlySheet = XLSX.utils.aoa_to_sheet([monthlyHeaders, ...monthlyRows]);
+    monthlySheet["!cols"] = [{ wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
+    XLSX.utils.book_append_sheet(workbook, monthlySheet, "Evolução Mensal");
+
+    // Expense Categories Sheet
+    if (categoryTotals.length > 0) {
+      const expenseHeaders = ["Categoria", "Valor (R$)", "% do Total"];
+      const expenseRows = categoryTotals.map((cat) => [
+        `${cat.emoji} ${cat.name}`,
+        cat.amount.toFixed(2),
+        `${((cat.amount / totalExpenses) * 100).toFixed(1)}%`
+      ]);
+
+      const expenseSheet = XLSX.utils.aoa_to_sheet([expenseHeaders, ...expenseRows]);
+      expenseSheet["!cols"] = [{ wch: 25 }, { wch: 15 }, { wch: 12 }];
+      XLSX.utils.book_append_sheet(workbook, expenseSheet, "Despesas por Categoria");
+    }
+
+    // Income Categories Sheet
+    if (incomeCategoryTotals.length > 0) {
+      const incomeHeaders = ["Categoria", "Valor (R$)", "% do Total"];
+      const incomeRows = incomeCategoryTotals.map((cat) => [
+        `${cat.emoji} ${cat.name}`,
+        cat.amount.toFixed(2),
+        `${((cat.amount / totalIncome) * 100).toFixed(1)}%`
+      ]);
+
+      const incomeSheet = XLSX.utils.aoa_to_sheet([incomeHeaders, ...incomeRows]);
+      incomeSheet["!cols"] = [{ wch: 25 }, { wch: 15 }, { wch: 12 }];
+      XLSX.utils.book_append_sheet(workbook, incomeSheet, "Receitas por Categoria");
+    }
+
+    XLSX.writeFile(workbook, `relatorio-financeiro-${format(new Date(), "yyyy-MM-dd")}.xlsx`);
+    toast.success("Relatório Excel exportado com sucesso!");
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen p-8 relative">
@@ -174,7 +364,7 @@ const Reports = () => {
             </Button>
             <h1 className="text-4xl font-bold">Relatórios</h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
             <span className="text-sm font-medium">Período:</span>
             <Select value={monthsToShow} onValueChange={setMonthsToShow}>
               <SelectTrigger className="w-[180px]">
@@ -186,6 +376,25 @@ const Reports = () => {
                 <SelectItem value="12">Último ano</SelectItem>
               </SelectContent>
             </Select>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <Download className="h-4 w-4" />
+                  Exportar
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleExportPDF}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Exportar PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportExcel}>
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  Exportar Excel
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 

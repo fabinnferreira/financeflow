@@ -54,6 +54,7 @@ export function DashboardNav({ onNewTransaction, onSignOut }: DashboardNavProps)
     { label: "Transações", icon: CreditCard, path: "/transactions" },
     { label: "Categorias", icon: FolderKanban, path: "/categories" },
     { label: "Contas", icon: Wallet, path: "/accounts" },
+    { label: "Cartões", icon: CreditCard, path: "/credit-cards" },
     { label: "Metas", icon: Target, path: "/goals" },
     { label: "Relatórios", icon: BarChart3, path: "/reports" },
     { label: "Open Banking", icon: Building2, path: "/bank-connections" },
