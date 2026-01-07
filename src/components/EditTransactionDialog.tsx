@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { transactionSchema } from "@/lib/validations";
+import { recalculateAccountBalance } from "@/lib/accountBalance";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface Account {
   id: number;
@@ -40,6 +42,7 @@ interface EditTransactionDialogProps {
 }
 
 export function EditTransactionDialog({ open, onOpenChange, onSuccess, transaction }: EditTransactionDialogProps) {
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -124,6 +127,8 @@ export function EditTransactionDialog({ open, onOpenChange, onSuccess, transacti
 
     try {
       const amountCents = Math.round(parseFloat(formData.amount) * 100);
+      const newAccountId = parseInt(formData.account_id);
+      const oldAccountId = transaction.account_id;
 
       const { error } = await supabase
         .from("transactions")
@@ -131,7 +136,7 @@ export function EditTransactionDialog({ open, onOpenChange, onSuccess, transacti
           type: formData.type,
           description: formData.description,
           amount_cents: amountCents,
-          account_id: parseInt(formData.account_id),
+          account_id: newAccountId,
           category_id: parseInt(formData.category_id),
           date: new Date(formData.date).toISOString(),
           needs_review: false, // Clear needs_review flag when editing
@@ -139,6 +144,18 @@ export function EditTransactionDialog({ open, onOpenChange, onSuccess, transacti
         .eq("id", transaction.id);
 
       if (error) throw error;
+
+      // Recalculate both old and new account balances if account changed
+      await recalculateAccountBalance(newAccountId);
+      if (oldAccountId !== newAccountId) {
+        await recalculateAccountBalance(oldAccountId);
+      }
+
+      // Invalidate queries
+      queryClient.invalidateQueries({ queryKey: ["transactions-infinite"] });
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["pending-review-count"] });
 
       toast.success("Transação atualizada com sucesso!");
       onOpenChange(false);

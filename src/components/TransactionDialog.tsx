@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { transactionSchema } from "@/lib/validations";
+import { recalculateAccountBalance } from "@/lib/accountBalance";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface Account {
   id: number;
@@ -29,6 +31,7 @@ interface TransactionDialogProps {
 }
 
 export function TransactionDialog({ open, onOpenChange, onSuccess }: TransactionDialogProps) {
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -101,6 +104,8 @@ export function TransactionDialog({ open, onOpenChange, onSuccess }: Transaction
 
       const amountCents = Math.round(parseFloat(formData.amount) * 100);
 
+      const accountId = parseInt(formData.account_id);
+      
       const { error } = await supabase
         .from("transactions")
         .insert({
@@ -108,12 +113,20 @@ export function TransactionDialog({ open, onOpenChange, onSuccess }: Transaction
           type: formData.type,
           description: formData.description,
           amount_cents: amountCents,
-          account_id: parseInt(formData.account_id),
+          account_id: accountId,
           category_id: parseInt(formData.category_id),
           date: new Date(formData.date).toISOString(),
         });
 
       if (error) throw error;
+
+      // Recalculate account balance
+      await recalculateAccountBalance(accountId);
+      
+      // Invalidate queries
+      queryClient.invalidateQueries({ queryKey: ["transactions-infinite"] });
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
 
       toast.success("Transação criada com sucesso!");
 

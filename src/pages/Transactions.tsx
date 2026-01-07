@@ -1,7 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowUpRight, ArrowDownRight, FileDown, MoreHorizontal, ArrowLeft, Search, X, Filter, FileSpreadsheet, FileText, Pencil } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, FileDown, MoreHorizontal, ArrowLeft, Search, X, Filter, FileSpreadsheet, FileText, Pencil, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -17,7 +16,6 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { useToast } from "@/hooks/use-toast";
 import DynamicBackground from "@/components/DynamicBackground";
 import { toast } from "sonner";
 import { DateRangePicker } from "@/components/DateRangePicker";
@@ -37,35 +35,29 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-
-interface Transaction {
-  id: number;
-  type: string;
-  description: string;
-  amount_cents: number;
-  date: string;
-  account_id: number;
-  category_id: number;
-  needs_review?: boolean;
-  categories: {
-    id: number;
-    name: string;
-    emoji: string;
-  };
-}
-
-interface Category {
-  id: number;
-  name: string;
-  emoji: string;
-}
+import { useTransactionsInfinite, useCategories, useDeleteTransaction, Transaction } from "@/hooks/useTransactions";
+import { formatCurrency, formatDate } from "@/lib/formatters";
 
 export default function Transactions() {
   const navigate = useNavigate();
-  const { toast: legacyToast } = useToast();
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  
+  // React Query hooks
+  const { 
+    data, 
+    isLoading, 
+    isFetchingNextPage, 
+    hasNextPage, 
+    fetchNextPage 
+  } = useTransactionsInfinite();
+  const { data: categories = [] } = useCategories();
+  const deleteTransaction = useDeleteTransaction();
+  
+  // All transactions from all pages
+  const transactions = useMemo(() => {
+    return data?.pages.flatMap(page => page.transactions) || [];
+  }, [data]);
+  
+  const totalCount = data?.pages[0]?.totalCount || 0;
   
   // Edit dialog
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -78,81 +70,13 @@ export default function Transactions() {
   const [endDate, setEndDate] = useState<Date>(endOfMonth(new Date()));
   const [showFilters, setShowFilters] = useState(false);
 
-  useEffect(() => {
-    fetchTransactions();
-    fetchCategories();
-  }, []);
-
-  const fetchTransactions = async () => {
-    setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      navigate("/auth");
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from("transactions")
-      .select("*, categories(id, name, emoji)")
-      .eq("user_id", user.id)
-      .order("needs_review", { ascending: false, nullsFirst: false })
-      .order("date", { ascending: false });
-
-    if (error) {
-      toast.error("Erro ao carregar transações");
-    } else {
-      setTransactions(data || []);
-    }
-    setLoading(false);
-  };
-
-  const fetchCategories = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data } = await supabase
-      .from("categories")
-      .select("id, name, emoji")
-      .eq("user_id", user.id)
-      .order("name");
-
-    if (data) {
-      setCategories(data);
-    }
-  };
-
-  const handleDelete = async (id: number) => {
-    try {
-      const { error } = await supabase
-        .from("transactions")
-        .delete()
-        .eq("id", id);
-
-      if (error) throw error;
-
-      toast.success("Transação excluída com sucesso!");
-      fetchTransactions();
-    } catch (error: any) {
-      console.error("Error deleting transaction:", error);
-      toast.error("Erro ao excluir transação");
-    }
+  const handleDelete = (id: number) => {
+    deleteTransaction.mutate(id);
   };
 
   const handleEdit = (transaction: Transaction) => {
     setSelectedTransaction(transaction);
     setEditDialogOpen(true);
-  };
-
-  const formatCurrency = (cents: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(cents / 100);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("pt-BR");
   };
 
   const clearFilters = () => {
@@ -232,7 +156,7 @@ export default function Transactions() {
         </TableRow>
       </TableHeader>
       <TableBody>
-        {loading ? (
+        {isLoading ? (
           Array.from({ length: 5 }).map((_, i) => (
             <TableRow key={i}>
               <TableCell><Skeleton className="h-4 w-8" /></TableCell>
@@ -431,9 +355,9 @@ export default function Transactions() {
         </Card>
 
         {/* Results Summary */}
-        {!loading && (
+        {!isLoading && (
           <div className="text-sm text-muted-foreground">
-            Mostrando {filteredTransactions.length} de {transactions.length} transações
+            Mostrando {transactions.length} de {totalCount} transações
           </div>
         )}
 
@@ -458,6 +382,27 @@ export default function Transactions() {
                 {renderTable(filterByType("expense"))}
               </TabsContent>
             </Tabs>
+            
+            {/* Load More Button */}
+            {hasNextPage && (
+              <div className="flex justify-center mt-6">
+                <Button
+                  variant="outline"
+                  onClick={() => fetchNextPage()}
+                  disabled={isFetchingNextPage}
+                  className="gap-2"
+                >
+                  {isFetchingNextPage ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Carregando...
+                    </>
+                  ) : (
+                    "Carregar mais transações"
+                  )}
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -465,8 +410,11 @@ export default function Transactions() {
       <EditTransactionDialog
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
-        onSuccess={fetchTransactions}
         transaction={selectedTransaction}
+        onSuccess={() => {
+          setEditDialogOpen(false);
+          setSelectedTransaction(null);
+        }}
       />
     </div>
   );
