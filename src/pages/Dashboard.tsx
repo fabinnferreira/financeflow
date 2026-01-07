@@ -1,161 +1,38 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowUpRight, ArrowDownRight, Wallet, CreditCard, TrendingUp, Plus, LogOut, Calendar, Settings } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Wallet, CreditCard, TrendingUp, LogOut, Calendar, Settings } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { TransactionDialog } from "@/components/TransactionDialog";
 import { DateRangePicker } from "@/components/DateRangePicker";
 import { GoalsWidget } from "@/components/GoalsWidget";
 import { PieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 import { ChartContainer, ChartTooltipContent, ChartLegend, ChartLegendContent, ChartConfig } from "@/components/ui/chart";
-import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear, subMonths } from "date-fns";
+import { startOfMonth, endOfMonth } from "date-fns";
 import DynamicBackground from "@/components/DynamicBackground";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { NotificationCenter } from "@/components/NotificationCenter";
 import { DashboardNav } from "@/components/DashboardNav";
-
-interface CategoryTotal {
-  category_id: number;
-  name: string;
-  emoji: string;
-  color: string;
-  total_amount_cents: number;
-  amount: number;
-}
-
-type PeriodFilter = "week" | "month" | "quarter" | "year" | "custom";
+import { PendingReviewBadge } from "@/components/PendingReviewBadge";
+import { useDashboard, PeriodFilter } from "@/hooks/useDashboard";
+import { useQueryClient } from "@tanstack/react-query";
 
 const Dashboard = () => {
-  const [loading, setLoading] = useState(true);
-  const [userName, setUserName] = useState<string>("");
-  const [balance, setBalance] = useState(0);
-  const [income, setIncome] = useState(0);
-  const [expenses, setExpenses] = useState(0);
-  const [categoryTotals, setCategoryTotals] = useState<CategoryTotal[]>([]);
-  const [dailyTotals, setDailyTotals] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("month");
   const [customStartDate, setCustomStartDate] = useState<Date>(startOfMonth(new Date()));
   const [customEndDate, setCustomEndDate] = useState<Date>(endOfMonth(new Date()));
-  const { toast } = useToast();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  const getDateRange = () => {
-    const now = new Date();
-    switch (periodFilter) {
-      case "week":
-        return { start: startOfWeek(now, { weekStartsOn: 0 }), end: endOfWeek(now, { weekStartsOn: 0 }) };
-      case "month":
-        return { start: startOfMonth(now), end: endOfMonth(now) };
-      case "quarter":
-        return { start: subMonths(startOfMonth(now), 2), end: endOfMonth(now) };
-      case "year":
-        return { start: startOfYear(now), end: endOfYear(now) };
-      case "custom":
-        return { start: customStartDate, end: customEndDate };
-      default:
-        return { start: startOfMonth(now), end: endOfMonth(now) };
-    }
-  };
-
-  useEffect(() => {
-    loadDashboardData();
-  }, [periodFilter, customStartDate, customEndDate]);
-
-  const loadDashboardData = async () => {
-    try {
-      setLoading(true);
-
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate("/auth");
-        return;
-      }
-
-      const { data: profile } = await supabase.from("profiles").select("name").eq("id", user.id).maybeSingle();
-      setUserName(profile?.name || user.email?.split("@")[0] || "Usuário");
-
-      const { start, end } = getDateRange();
-      const startDate = start.toISOString();
-      const endDate = end.toISOString();
-
-      const { data: transactions, error: transError } = await supabase
-        .from("transactions")
-        .select(`*, categories (name, emoji, color)`)
-        .eq("user_id", user.id)
-        .gte("date", startDate)
-        .lte("date", endDate)
-        .order("date", { ascending: false });
-
-      if (transError) throw transError;
-
-      let totalIncome = 0;
-      let totalExpenses = 0;
-      transactions?.forEach(transaction => {
-        const amount = transaction.amount_cents / 100;
-        if (transaction.type === "income") {
-          totalIncome += amount;
-        } else {
-          totalExpenses += amount;
-        }
-      });
-      setIncome(totalIncome);
-      setExpenses(totalExpenses);
-
-      const { data: categoryData, error: categoryError } = (await supabase.rpc('get_category_totals' as any, {
-        start_date: startDate,
-        end_date: endDate
-      })) as any;
-
-      if (categoryError) {
-        console.error("Error fetching category totals:", categoryError);
-      } else if (categoryData) {
-        const chartData = categoryData.map((item: any) => ({
-          ...item,
-          amount: item.total_amount_cents / 100
-        }));
-        setCategoryTotals(chartData);
-      }
-
-      const { data: dailyData, error: dailyError } = (await supabase.rpc('get_daily_totals' as any, {
-        start_date: startDate,
-        end_date: endDate
-      })) as any;
-
-      if (dailyError) {
-        console.error("Error fetching daily totals:", dailyError);
-      } else if (dailyData) {
-        const dailyChartData = dailyData.map((item: any) => ({
-          ...item,
-          income: item.income / 100,
-          expense: item.expense / 100
-        }));
-        setDailyTotals(dailyChartData);
-      }
-
-      const { data: accounts, error: accountsError } = await supabase
-        .from("accounts")
-        .select("balance_cents")
-        .eq("user_id", user.id);
-
-      if (accountsError) throw accountsError;
-      const totalBalance = accounts?.reduce((sum, acc) => sum + acc.balance_cents, 0) || 0;
-      setBalance(totalBalance / 100);
-      setLoading(false);
-    } catch (error: any) {
-      console.error("Error loading dashboard:", error);
-      toast({
-        title: "Erro ao carregar dados",
-        description: error.message || "Tente novamente mais tarde",
-        variant: "destructive"
-      });
-      setLoading(false);
-    }
-  };
+  const { data, isLoading, error } = useDashboard(
+    periodFilter,
+    periodFilter === "custom" ? customStartDate : undefined,
+    periodFilter === "custom" ? customEndDate : undefined
+  );
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -173,7 +50,13 @@ const Dashboard = () => {
     }
   };
 
-  if (loading) {
+  const handleTransactionSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    queryClient.invalidateQueries({ queryKey: ["transactions-infinite"] });
+    queryClient.invalidateQueries({ queryKey: ["accounts"] });
+  };
+
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-secondary/20">
         <header className="bg-gradient-primary text-primary-foreground py-6 shadow-lg">
@@ -192,6 +75,13 @@ const Dashboard = () => {
     );
   }
 
+  if (error) {
+    navigate("/auth");
+    return null;
+  }
+
+  const { userName, balance, income, expenses, categoryTotals, dailyTotals } = data!;
+
   return (
     <div className="min-h-screen relative overflow-hidden">
       <DynamicBackground />
@@ -206,6 +96,8 @@ const Dashboard = () => {
               </div>
               
               <div className="flex items-center gap-2">
+                <PendingReviewBadge />
+                
                 <DashboardNav 
                   onNewTransaction={() => setDialogOpen(true)} 
                   onSignOut={handleSignOut} 
@@ -398,7 +290,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <TransactionDialog open={dialogOpen} onOpenChange={setDialogOpen} onSuccess={loadDashboardData} />
+        <TransactionDialog open={dialogOpen} onOpenChange={setDialogOpen} onSuccess={handleTransactionSuccess} />
       </div>
     </div>
   );
