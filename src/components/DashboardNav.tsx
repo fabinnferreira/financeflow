@@ -75,7 +75,7 @@ export function DashboardNav({ onNewTransaction, onSignOut }: DashboardNavProps)
             variant="outline"
             size="sm"
             onClick={() => navigate(item.path)}
-            className="gap-2 border-primary-foreground/30 hover:bg-primary-foreground/20 text-success"
+            className="gap-2"
           >
             <item.icon className="w-4 h-4" />
             {item.label}
@@ -102,7 +102,7 @@ export function DashboardNav({ onNewTransaction, onSignOut }: DashboardNavProps)
       <div className="hidden md:flex lg:hidden gap-2 items-center">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-2 border-primary-foreground/30 hover:bg-primary-foreground/20 text-success">
+            <Button variant="outline" size="sm" className="gap-2">
               <Menu className="w-4 h-4" />
               Menu
             </Button>
@@ -147,7 +147,7 @@ export function DashboardNav({ onNewTransaction, onSignOut }: DashboardNavProps)
         </Button>
         <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
           <SheetTrigger asChild>
-            <Button variant="outline" size="icon" className="border-primary-foreground/30 hover:bg-primary-foreground/20 text-success">
+            <Button variant="outline" size="icon">
               <Menu className="w-5 h-5" />
             </Button>
           </SheetTrigger>

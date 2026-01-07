@@ -173,7 +173,7 @@ export default function BankConnections() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'CONNECTED':
-        return <Badge variant="default" className="bg-green-500">Conectado</Badge>;
+        return <Badge className="bg-success text-success-foreground">Conectado</Badge>;
       case 'UPDATING':
         return <Badge variant="secondary">Atualizando</Badge>;
       case 'LOGIN_ERROR':
@@ -200,7 +200,7 @@ export default function BankConnections() {
           </div>
         </div>
 
-        <Card className="mb-6 bg-card/60 backdrop-blur-md border-border/50">
+        <Card className="mb-6 bg-card border-border">
           <CardHeader>
             <CardTitle className="text-lg">Conectar Nova Conta</CardTitle>
             <CardDescription>

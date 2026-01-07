@@ -87,12 +87,12 @@ const Dashboard = () => {
       <DynamicBackground />
 
       <div className="relative z-10">
-        <header className="backdrop-blur-lg text-primary-foreground py-4 md:py-6 shadow-lg bg-[#1e232d]">
+        <header className="backdrop-blur-lg py-4 md:py-6 shadow-lg bg-card border-b border-border">
           <div className="container mx-auto px-4">
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0">
-                <h1 className="text-xl md:text-2xl font-bold text-slate-50 truncate">FinanceFlow</h1>
-                <p className="text-sm text-[#1cbb56] truncate">Olá, {userName}! 👋</p>
+                <h1 className="text-xl md:text-2xl font-bold text-foreground truncate">FinanceFlow</h1>
+                <p className="text-sm text-primary truncate">Olá, {userName}! 👋</p>
               </div>
               
               <div className="flex items-center gap-2">
@@ -108,11 +108,11 @@ const Dashboard = () => {
                 
                 {/* Desktop only settings/logout */}
                 <div className="hidden lg:flex items-center gap-1">
-                  <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-foreground/20" onClick={() => navigate("/settings")} title="Configurações">
+                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground hover:bg-muted" onClick={() => navigate("/settings")} title="Configurações">
                     <Settings className="w-5 h-5" />
                   </Button>
                   
-                  <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-foreground/20" onClick={handleSignOut} title="Sair">
+                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground hover:bg-muted" onClick={handleSignOut} title="Sair">
                     <LogOut className="w-5 h-5" />
                   </Button>
                 </div>
