@@ -201,7 +201,7 @@ export default function ReviewTransactions() {
         </div>
 
         {isLoading ? (
-          <Card className="bg-card/60 backdrop-blur-md border-border/50">
+          <Card className="bg-card border-border">
             <CardContent className="p-6">
               <div className="space-y-4">
                 <Skeleton className="h-8 w-64" />
@@ -211,9 +211,9 @@ export default function ReviewTransactions() {
             </CardContent>
           </Card>
         ) : transactions.length === 0 ? (
-          <Card className="bg-card/60 backdrop-blur-md border-border/50">
+          <Card className="bg-card border-border">
             <CardContent className="p-12 text-center">
-              <Check className="h-12 w-12 mx-auto mb-4 text-green-500" />
+              <Check className="h-12 w-12 mx-auto mb-4 text-success" />
               <h3 className="text-lg font-medium mb-2">Tudo categorizado!</h3>
               <p className="text-muted-foreground mb-4">
                 Não há transações pendentes de revisão.
@@ -225,7 +225,7 @@ export default function ReviewTransactions() {
           </Card>
         ) : currentTransaction ? (
           <div className="space-y-4">
-            <Card className="bg-card/60 backdrop-blur-md border-border/50">
+            <Card className="bg-card border-border">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
@@ -235,7 +235,7 @@ export default function ReviewTransactions() {
                     </CardDescription>
                   </div>
                   <div className="text-right">
-                    <div className={`text-2xl font-bold ${currentTransaction.type === 'income' ? 'text-green-500' : 'text-red-500'}`}>
+                    <div className={`text-2xl font-bold ${currentTransaction.type === 'income' ? 'text-success' : 'text-destructive'}`}>
                       {currentTransaction.type === 'income' ? '+' : '-'}{formatCurrency(currentTransaction.amount_cents)}
                     </div>
                     <Badge variant={currentTransaction.type === 'income' ? 'default' : 'secondary'}>
@@ -312,7 +312,7 @@ export default function ReviewTransactions() {
             </div>
 
             {/* Quick overview */}
-            <Card className="bg-card/60 backdrop-blur-md border-border/50">
+            <Card className="bg-card border-border">
               <CardHeader>
                 <CardTitle className="text-sm font-medium">Visão Geral</CardTitle>
               </CardHeader>
@@ -323,13 +323,13 @@ export default function ReviewTransactions() {
                     <div className="text-xs text-muted-foreground">Para revisar</div>
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-red-500">
+                    <div className="text-2xl font-bold text-destructive">
                       {formatCurrency(transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount_cents, 0))}
                     </div>
                     <div className="text-xs text-muted-foreground">Despesas</div>
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-green-500">
+                    <div className="text-2xl font-bold text-success">
                       {formatCurrency(transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount_cents, 0))}
                     </div>
                     <div className="text-xs text-muted-foreground">Receitas</div>

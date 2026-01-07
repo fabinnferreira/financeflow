@@ -21,7 +21,7 @@ const Hero = () => {
               <span className="text-sm font-medium text-success">Controle Total das Suas Finanças</span>
             </div>
 
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold leading-tight">Gerencie Suas<span className="block bg-gradient-hero bg-clip-text animate-glow text-blue-600 py-0 px-0 mr-[410px]">Finanças Pessoais</span>
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold leading-tight text-foreground">Gerencie Suas<span className="block bg-gradient-to-r from-primary to-success bg-clip-text text-transparent">Finanças Pessoais</span>
               com inteligência
             </h1>
 
