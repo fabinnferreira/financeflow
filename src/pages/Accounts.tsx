@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { PlusCircle, Edit, Trash, Landmark, CreditCard, Wallet, Loader2, ArrowLeft } from 'lucide-react';
+import { PlusCircle, Edit, Trash, Landmark, CreditCard, Wallet, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -12,7 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import DynamicBackground from '@/components/DynamicBackground';
+import { PageHeader } from '@/components/PageHeader';
 import { accountSchema } from '@/lib/validations';
+import { formatCurrency } from '@/lib/formatters';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -208,12 +210,7 @@ const Accounts = () => {
     }
   };
 
-  const formatCurrency = (cents: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(cents / 100);
-  };
+  // Removed duplicate formatCurrency - using import from @/lib/formatters
 
   const AccountForm = ({ onSubmit, submitLabel }: { onSubmit: (e: React.FormEvent) => void; submitLabel: string }) => (
     <form onSubmit={onSubmit} className="space-y-4">
@@ -359,38 +356,32 @@ const Accounts = () => {
     <div className="min-h-screen p-8 relative">
       <DynamicBackground />
       <div className="max-w-7xl mx-auto relative z-10">
-        <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate('/dashboard')}
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <h1 className="text-4xl font-bold">Minhas Contas</h1>
-          </div>
-          <Dialog open={dialogOpen} onOpenChange={(open) => {
-            setDialogOpen(open);
-            if (!open) resetForm();
-          }}>
-            <DialogTrigger asChild>
-              <Button>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Nova Conta
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Adicionar Nova Conta</DialogTitle>
-                <DialogDescription>
-                  Adicione uma nova conta para organizar suas finanças
-                </DialogDescription>
-              </DialogHeader>
-              <AccountForm onSubmit={handleSubmit} submitLabel="Criar" />
-            </DialogContent>
-          </Dialog>
-        </div>
+        <PageHeader
+          title="Minhas Contas"
+          subtitle="Gerencie suas contas bancárias, cartões e dinheiro"
+          actions={
+            <Dialog open={dialogOpen} onOpenChange={(open) => {
+              setDialogOpen(open);
+              if (!open) resetForm();
+            }}>
+              <DialogTrigger asChild>
+                <Button>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Nova Conta
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Adicionar Nova Conta</DialogTitle>
+                  <DialogDescription>
+                    Adicione uma nova conta para organizar suas finanças
+                  </DialogDescription>
+                </DialogHeader>
+                <AccountForm onSubmit={handleSubmit} submitLabel="Criar" />
+              </DialogContent>
+            </Dialog>
+          }
+        />
 
         {/* Edit Dialog */}
         <Dialog open={editDialogOpen} onOpenChange={(open) => {
