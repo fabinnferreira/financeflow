@@ -2,12 +2,11 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Target, Plus, ArrowLeft, Trash2, Edit2, Loader2, Calendar } from "lucide-react";
+import { Target, Plus, Trash2, Edit2, Loader2, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -16,7 +15,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { goalSchema, GoalFormData } from "@/lib/validations";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import DynamicBackground from "@/components/DynamicBackground";
+import { PageHeader } from "@/components/PageHeader";
 import { format, differenceInDays } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { ptBR } from "date-fns/locale";
 
 interface Goal {
@@ -185,36 +186,26 @@ const Goals = () => {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
+    <div className="min-h-screen relative overflow-hidden p-8">
       <DynamicBackground />
-      <div className="relative z-10 container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold flex items-center gap-2">
-                <Target className="w-8 h-8 text-primary" />
-                Metas Financeiras
-              </h1>
-              <p className="text-muted-foreground">Defina e acompanhe suas metas de economia</p>
-            </div>
-          </div>
-
-          <Dialog open={dialogOpen} onOpenChange={(open) => {
-            setDialogOpen(open);
-            if (!open) {
-              setEditingGoal(null);
-              form.reset();
-            }
-          }}>
-            <DialogTrigger asChild>
-              <Button className="gap-2">
-                <Plus className="w-4 h-4" />
-                Nova Meta
-              </Button>
-            </DialogTrigger>
+      <div className="relative z-10 container mx-auto">
+        <PageHeader
+          title="Metas Financeiras"
+          subtitle="Defina e acompanhe suas metas de economia"
+          actions={
+            <Dialog open={dialogOpen} onOpenChange={(open) => {
+              setDialogOpen(open);
+              if (!open) {
+                setEditingGoal(null);
+                form.reset();
+              }
+            }}>
+              <DialogTrigger asChild>
+                <Button className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  Nova Meta
+                </Button>
+              </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>{editingGoal ? "Editar Meta" : "Nova Meta"}</DialogTitle>
@@ -346,7 +337,8 @@ const Goals = () => {
               </Form>
             </DialogContent>
           </Dialog>
-        </div>
+        }
+        />
 
         {goals.length === 0 ? (
           <Card className="text-center py-12">

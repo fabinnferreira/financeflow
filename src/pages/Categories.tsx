@@ -7,10 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PlusCircle, Edit, Trash, ArrowLeft, Loader2 } from "lucide-react";
+import { PlusCircle, Edit, Trash, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import DynamicBackground from "@/components/DynamicBackground";
+import { PageHeader } from "@/components/PageHeader";
 import { toast } from "sonner";
 import { categorySchema } from "@/lib/validations";
 import {
@@ -358,23 +359,13 @@ const Categories = () => {
   );
 
   return (
-    <div className="min-h-screen relative">
+    <div className="min-h-screen relative p-8">
       <DynamicBackground />
-      <header className="bg-primary/70 backdrop-blur-lg text-primary-foreground py-6 shadow-lg relative z-10">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate("/dashboard")}
-                className="text-primary-foreground hover:bg-primary-foreground/20"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-              <h1 className="text-2xl font-bold">Minhas Categorias</h1>
-            </div>
-
+      <div className="container mx-auto relative z-10">
+        <PageHeader
+          title="Minhas Categorias"
+          subtitle="Organize suas transações por categoria"
+          actions={
             <Dialog open={dialogOpen} onOpenChange={(open) => {
               setDialogOpen(open);
               if (!open) resetForm();
@@ -395,9 +386,8 @@ const Categories = () => {
                 <CategoryForm onSubmit={handleSubmit} submitLabel="Criar" />
               </DialogContent>
             </Dialog>
-          </div>
-        </div>
-      </header>
+          }
+        />
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={(open) => {
@@ -418,7 +408,6 @@ const Categories = () => {
         </DialogContent>
       </Dialog>
 
-      <div className="container mx-auto px-4 py-8 relative z-10">
         <Tabs defaultValue="expense" className="w-full animate-fade-in">
           <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-8">
             <TabsTrigger value="expense">Despesas</TabsTrigger>

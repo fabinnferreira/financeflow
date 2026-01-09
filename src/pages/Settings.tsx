@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, User, Lock, Trash2, Save, Loader2 } from "lucide-react";
+import { User, Lock, Trash2, Save, Loader2 } from "lucide-react";
 import DynamicBackground from "@/components/DynamicBackground";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { PageHeader } from "@/components/PageHeader";
+import { toast } from "sonner";
+import { z } from "zod";
 import { toast } from "sonner";
 import { z } from "zod";
 import {
@@ -199,20 +200,10 @@ export default function Settings() {
     <div className="min-h-screen relative p-8">
       <DynamicBackground />
       <div className="max-w-2xl mx-auto space-y-8 relative z-10">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate("/dashboard")}
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <h1 className="text-4xl font-bold">Configurações</h1>
-          </div>
-          <ThemeToggle />
-        </div>
+        <PageHeader
+          title="Configurações"
+          subtitle="Gerencie seu perfil e preferências"
+        />
 
         {/* Profile Section */}
         <Card className="animate-fade-in">
