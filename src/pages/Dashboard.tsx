@@ -19,6 +19,7 @@ import { DashboardNav } from "@/components/DashboardNav";
 import { PendingReviewBadge } from "@/components/PendingReviewBadge";
 import { useDashboard, PeriodFilter } from "@/hooks/useDashboard";
 import { useQueryClient } from "@tanstack/react-query";
+import { formatCurrencyValue } from "@/lib/formatters";
 
 const Dashboard = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -165,7 +166,7 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-primary">
-                  R$ {balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  {formatCurrencyValue(balance)}
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
                   Atualizado agora
@@ -182,7 +183,7 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-success">
-                  R$ {income.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  {formatCurrencyValue(income)}
                 </div>
                 <p className="text-xs text-success mt-2 flex items-center gap-1">
                   <TrendingUp className="w-3 h-3" />
@@ -200,7 +201,7 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-destructive">
-                  R$ {expenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  {formatCurrencyValue(expenses)}
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
                   {income > 0 ? `${Math.round(expenses / income * 100)}% da receita` : getPeriodLabel()}
@@ -275,7 +276,7 @@ const Dashboard = () => {
                     <div className="mt-6 p-4 bg-accent/50 rounded-lg">
                       <p className="text-sm text-muted-foreground mb-2">Total de Despesas</p>
                       <p className="text-2xl font-bold text-destructive">
-                        R$ {expenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        {formatCurrencyValue(expenses)}
                       </p>
                     </div>
                   </>

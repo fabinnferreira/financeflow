@@ -19,6 +19,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Label } from "@/components/ui/label";
+import { formatCurrencyValue } from "@/lib/formatters";
 
 interface Goal {
   id: number;
@@ -431,10 +432,10 @@ const Goals = () => {
                     <div className="flex justify-between items-end">
                       <div>
                         <p className="text-2xl font-bold" style={{ color: goal.color }}>
-                          R$ {(goal.current_amount_cents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                          {formatCurrencyValue(goal.current_amount_cents / 100)}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          de R$ {(goal.target_amount_cents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                          de {formatCurrencyValue(goal.target_amount_cents / 100)}
                         </p>
                       </div>
 

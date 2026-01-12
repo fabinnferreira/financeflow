@@ -20,9 +20,7 @@ import { toast } from 'sonner';
 import DynamicBackground from '@/components/DynamicBackground';
 import { PluggyConnectWidget } from '@/components/PluggyConnectWidget';
 import { PageHeader } from '@/components/PageHeader';
-import { formatCurrency } from '@/lib/formatters';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatCurrency, formatDateWithTime } from '@/lib/formatters';
 
 interface PluggyAccount {
   id: string;
@@ -148,10 +146,7 @@ export default function BankConnections() {
     }
   };
 
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'Nunca';
-    return format(new Date(dateString), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
-  };
+  // Usando formatDateWithTime centralizado do @/lib/formatters
 
   const getAccountIcon = (type: string) => {
     switch (type) {
@@ -258,7 +253,7 @@ export default function BankConnections() {
                         <h3 className="font-semibold text-lg">{connection.connector_name}</h3>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Clock className="h-3 w-3" />
-                          Última sync: {formatDate(connection.last_sync_at)}
+                          Última sync: {formatDateWithTime(connection.last_sync_at)}
                         </div>
                         <div className="mt-1">
                           {getStatusBadge(connection.status)}
