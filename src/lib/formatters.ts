@@ -1,3 +1,6 @@
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+
 /**
  * Centralized formatting utilities for the application
  */
@@ -23,15 +26,31 @@ export const formatCurrencyValue = (value: number): string => {
 };
 
 /**
- * Format a date string to Brazilian locale
+ * Format a date string to Brazilian locale (dd/MM/yyyy)
  */
 export const formatDate = (dateString: string): string => {
   return new Date(dateString).toLocaleDateString('pt-BR');
 };
 
 /**
- * Format a date string to Brazilian locale with time
+ * Format a date string to Brazilian locale with time (dd/MM/yyyy HH:mm)
  */
 export const formatDateTime = (dateString: string): string => {
   return new Date(dateString).toLocaleString('pt-BR');
+};
+
+/**
+ * Format a date string with custom format using date-fns
+ * Returns "Nunca" if dateString is null
+ */
+export const formatDateWithTime = (dateString: string | null): string => {
+  if (!dateString) return 'Nunca';
+  return format(new Date(dateString), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+};
+
+/**
+ * Format a date for display with month name (ex: "15 de janeiro de 2024")
+ */
+export const formatDateFull = (dateString: string): string => {
+  return format(new Date(dateString), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
 };

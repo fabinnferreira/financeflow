@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Target, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { formatCurrencyValue } from "@/lib/formatters";
 
 interface Goal {
   id: number;
@@ -112,10 +113,10 @@ export const GoalsWidget = () => {
                   />
                   <div className="flex justify-between text-xs text-muted-foreground">
                     <span>
-                      R$ {(goal.current_amount_cents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                      {formatCurrencyValue(goal.current_amount_cents / 100)}
                     </span>
                     <span>
-                      R$ {(goal.target_amount_cents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                      {formatCurrencyValue(goal.target_amount_cents / 100)}
                     </span>
                   </div>
                 </div>
