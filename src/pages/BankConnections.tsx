@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, RefreshCw, Trash2, Building2, CreditCard, Wallet, Loader2, Clock, ClipboardList } from 'lucide-react';
+import { RefreshCw, Trash2, Building2, CreditCard, Wallet, Loader2, Clock, ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
@@ -19,6 +19,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import DynamicBackground from '@/components/DynamicBackground';
 import { PluggyConnectWidget } from '@/components/PluggyConnectWidget';
+import { PageHeader } from '@/components/PageHeader';
+import { formatCurrency } from '@/lib/formatters';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -146,13 +148,6 @@ export default function BankConnections() {
     }
   };
 
-  const formatCurrency = (cents: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(cents / 100);
-  };
-
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Nunca';
     return format(new Date(dateString), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
@@ -184,23 +179,18 @@ export default function BankConnections() {
   };
 
   return (
-    <div className="min-h-screen relative">
+    <div className="min-h-screen relative p-8">
       <DynamicBackground />
       
-      <div className="relative z-10 container mx-auto px-4 py-8">
-        <div className="flex items-center gap-4 mb-8">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold">Conexões Bancárias</h1>
-            <p className="text-muted-foreground">
-              Conecte suas contas bancárias via Open Banking
-            </p>
-          </div>
-        </div>
+      <div className="relative z-10 max-w-7xl mx-auto space-y-8">
+        <PageHeader
+          title="Conexões Bancárias"
+          subtitle="Conecte suas contas bancárias via Open Banking"
+          showBack
+          backTo="/dashboard"
+        />
 
-        <Card className="mb-6 bg-card border-border">
+        <Card className="bg-card border-border">
           <CardHeader>
             <CardTitle className="text-lg">Conectar Nova Conta</CardTitle>
             <CardDescription>

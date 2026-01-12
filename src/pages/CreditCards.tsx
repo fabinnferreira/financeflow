@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, CreditCard, Edit, Trash, PlusCircle, Loader2, Calendar, AlertCircle } from "lucide-react";
+import { CreditCard, Edit, Trash, PlusCircle, Loader2, Calendar, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import DynamicBackground from "@/components/DynamicBackground";
+import { PageHeader } from "@/components/PageHeader";
 import { formatCurrency } from "@/lib/formatters";
 import {
   AlertDialog,
@@ -362,44 +363,35 @@ const CreditCards = () => {
   return (
     <div className="min-h-screen p-8 relative">
       <DynamicBackground />
-      <div className="max-w-7xl mx-auto relative z-10">
-        <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate("/dashboard")}
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div>
-              <h1 className="text-4xl font-bold">Cartões de Crédito</h1>
-              <p className="text-muted-foreground">
-                Configure datas de fechamento e vencimento
-              </p>
-            </div>
-          </div>
-          <Dialog open={dialogOpen} onOpenChange={(open) => {
-            setDialogOpen(open);
-            if (!open) resetForm();
-          }}>
-            <DialogTrigger asChild>
-              <Button disabled={getAvailableAccounts().length === 0}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Configurar Cartão
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Configurar Cartão de Crédito</DialogTitle>
-                <DialogDescription>
-                  Defina as datas de fechamento e vencimento do cartão
-                </DialogDescription>
-              </DialogHeader>
-              <CardForm onSubmit={handleSubmit} submitLabel="Salvar" />
-            </DialogContent>
-          </Dialog>
-        </div>
+      <div className="max-w-7xl mx-auto relative z-10 space-y-8">
+        <PageHeader
+          title="Cartões de Crédito"
+          subtitle="Configure datas de fechamento e vencimento"
+          showBack
+          backTo="/dashboard"
+          actions={
+            <Dialog open={dialogOpen} onOpenChange={(open) => {
+              setDialogOpen(open);
+              if (!open) resetForm();
+            }}>
+              <DialogTrigger asChild>
+                <Button disabled={getAvailableAccounts().length === 0}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Configurar Cartão
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Configurar Cartão de Crédito</DialogTitle>
+                  <DialogDescription>
+                    Defina as datas de fechamento e vencimento do cartão
+                  </DialogDescription>
+                </DialogHeader>
+                <CardForm onSubmit={handleSubmit} submitLabel="Salvar" />
+              </DialogContent>
+            </Dialog>
+          }
+        />
 
         {/* Edit Dialog */}
         <Dialog open={editDialogOpen} onOpenChange={(open) => {
