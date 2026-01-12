@@ -359,46 +359,45 @@ const Reports = () => {
     <div className="min-h-screen relative p-8">
       <DynamicBackground />
       <div className="max-w-7xl mx-auto space-y-8 relative z-10">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <h1 className="text-4xl font-bold">Relatórios</h1>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm font-medium">Período:</span>
-            <Select value={monthsToShow} onValueChange={setMonthsToShow}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="3">Últimos 3 meses</SelectItem>
-                <SelectItem value="6">Últimos 6 meses</SelectItem>
-                <SelectItem value="12">Último ano</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2">
-                  <Download className="h-4 w-4" />
-                  Exportar
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleExportPDF}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  Exportar PDF
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleExportExcel}>
-                  <FileSpreadsheet className="h-4 w-4 mr-2" />
-                  Exportar Excel
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
+        <PageHeader 
+          title="Relatórios" 
+          showBack 
+          backTo="/dashboard"
+          actions={
+            <div className="flex items-center gap-4">
+              <span className="text-sm font-medium">Período:</span>
+              <Select value={monthsToShow} onValueChange={setMonthsToShow}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="3">Últimos 3 meses</SelectItem>
+                  <SelectItem value="6">Últimos 6 meses</SelectItem>
+                  <SelectItem value="12">Último ano</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="gap-2">
+                    <Download className="h-4 w-4" />
+                    Exportar
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleExportPDF}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Exportar PDF
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportExcel}>
+                    <FileSpreadsheet className="h-4 w-4 mr-2" />
+                    Exportar Excel
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          }
+        />
 
         {/* Summary Cards */}
         <div className="grid md:grid-cols-4 gap-6">
