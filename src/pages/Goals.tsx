@@ -18,7 +18,7 @@ import DynamicBackground from "@/components/DynamicBackground";
 import { PageHeader } from "@/components/PageHeader";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ptBR } from "date-fns/locale";
+import { Label } from "@/components/ui/label";
 
 interface Goal {
   id: number;
