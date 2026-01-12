@@ -7,15 +7,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { PageHeader } from "@/components/PageHeader";
+import DynamicBackground from "@/components/DynamicBackground";
 import { 
-  ArrowLeft, 
   RefreshCw, 
   Users, 
   Database, 
   AlertCircle,
   CheckCircle,
   Clock,
-  TrendingUp,
   CreditCard,
   Trash2
 } from "lucide-react";
@@ -214,22 +214,16 @@ export default function Admin() {
 
   if (!isAdmin || isLoading) {
     return (
-      <div className="min-h-screen bg-background">
-        <header className="border-b border-border">
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div>
-                <div className="h-8 w-64 bg-muted animate-pulse rounded" />
-                <div className="h-4 w-96 bg-muted animate-pulse rounded mt-2" />
-              </div>
-            </div>
-          </div>
-        </header>
-        <main className="container mx-auto px-4 py-8">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+      <div className="min-h-screen relative p-8">
+        <DynamicBackground />
+        <div className="max-w-7xl mx-auto relative z-10 space-y-8">
+          <PageHeader
+            title="Painel de Administração"
+            subtitle="Gerencie conexões bancárias e visualize estatísticas"
+            showBack
+            backTo="/dashboard"
+          />
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {[...Array(4)].map((_, i) => (
               <Card key={i}>
                 <CardHeader className="pb-2">
@@ -254,36 +248,30 @@ export default function Admin() {
               </div>
             </CardContent>
           </Card>
-        </main>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div>
-                <h1 className="text-2xl font-bold">Painel de Administração</h1>
-                <p className="text-muted-foreground">Gerencie conexões bancárias e visualize estatísticas</p>
-              </div>
-            </div>
+    <div className="min-h-screen relative p-8">
+      <DynamicBackground />
+      <div className="max-w-7xl mx-auto relative z-10 space-y-8">
+        <PageHeader
+          title="Painel de Administração"
+          subtitle="Gerencie conexões bancárias e visualize estatísticas"
+          showBack
+          backTo="/dashboard"
+          actions={
             <Button onClick={handleManualSync} disabled={isSyncing}>
               <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? "animate-spin" : ""}`} />
               {isSyncing ? "Sincronizando..." : "Sincronizar Agora"}
             </Button>
-          </div>
-        </div>
-      </header>
+          }
+        />
 
-      <main className="container mx-auto px-4 py-8">
         {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Usuários</CardTitle>
@@ -442,7 +430,7 @@ export default function Admin() {
             </Table>
           </CardContent>
         </Card>
-      </main>
+      </div>
     </div>
   );
 }

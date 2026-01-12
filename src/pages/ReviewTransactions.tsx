@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Check, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -9,6 +9,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import DynamicBackground from '@/components/DynamicBackground';
+import { PageHeader } from '@/components/PageHeader';
+import { formatCurrency } from '@/lib/formatters';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -168,37 +170,27 @@ export default function ReviewTransactions() {
     }
   };
 
-  const formatCurrency = (cents: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(cents / 100);
-  };
-
   const currentTransaction = transactions[currentIndex];
 
   return (
-    <div className="min-h-screen relative">
+    <div className="min-h-screen relative p-8">
       <DynamicBackground />
       
-      <div className="relative z-10 container mx-auto px-4 py-8">
-        <div className="flex items-center gap-4 mb-8">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/bank-connections')}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex-1">
-            <h1 className="text-3xl font-bold">Revisar Transações</h1>
-            <p className="text-muted-foreground">
-              Categorize as transações importadas do Open Banking
-            </p>
-          </div>
-          {transactions.length > 0 && (
-            <Button onClick={handleSaveAll} disabled={isSaving}>
-              {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Salvar Todas ({transactions.length})
-            </Button>
-          )}
-        </div>
+      <div className="relative z-10 max-w-7xl mx-auto space-y-8">
+        <PageHeader
+          title="Revisar Transações"
+          subtitle="Categorize as transações importadas do Open Banking"
+          showBack
+          backTo="/bank-connections"
+          actions={
+            transactions.length > 0 ? (
+              <Button onClick={handleSaveAll} disabled={isSaving}>
+                {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Salvar Todas ({transactions.length})
+              </Button>
+            ) : undefined
+          }
+        />
 
         {isLoading ? (
           <Card className="bg-card border-border">
