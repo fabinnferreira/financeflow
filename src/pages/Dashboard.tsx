@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowUpRight, ArrowDownRight, Wallet, CreditCard, TrendingUp, LogOut, Calendar, Settings } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { TransactionDialog } from "@/components/TransactionDialog";
 import { DateRangePicker } from "@/components/DateRangePicker";
 import { GoalsWidget } from "@/components/GoalsWidget";
@@ -20,6 +20,9 @@ import { PendingReviewBadge } from "@/components/PendingReviewBadge";
 import { useDashboard, PeriodFilter } from "@/hooks/useDashboard";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatCurrencyValue } from "@/lib/formatters";
+import { usePlan } from "@/hooks/usePlan";
+import { UpgradeBanner } from "@/components/UpgradeBanner";
+import { toast } from "sonner";
 
 const Dashboard = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -27,7 +30,23 @@ const Dashboard = () => {
   const [customStartDate, setCustomStartDate] = useState<Date>(startOfMonth(new Date()));
   const [customEndDate, setCustomEndDate] = useState<Date>(endOfMonth(new Date()));
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
+  const { plan, refreshPlan } = usePlan();
+
+  // Handle upgrade success/cancel
+  useEffect(() => {
+    const upgrade = searchParams.get("upgrade");
+    if (upgrade === "success") {
+      toast.success("Bem-vindo ao Premium! 🎉 Seu plano foi ativado.");
+      refreshPlan();
+      // Remove query param
+      window.history.replaceState({}, "", "/dashboard");
+    } else if (upgrade === "canceled") {
+      toast.info("Checkout cancelado. Você continua no plano gratuito.");
+      window.history.replaceState({}, "", "/dashboard");
+    }
+  }, [searchParams, refreshPlan]);
 
   const { data, isLoading, error } = useDashboard(
     periodFilter,
@@ -123,6 +142,9 @@ const Dashboard = () => {
         </header>
 
         <div className="container mx-auto px-4 py-8">
+          {/* Upgrade Banner for free users */}
+          {plan === "free" && <UpgradeBanner className="mb-6" />}
+
           {/* Date Filter */}
           <Card className="mb-6 animate-fade-in">
             <CardContent className="py-4">

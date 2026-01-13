@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import { transactionSchema } from "@/lib/validations";
 import { recalculateAccountBalance } from "@/lib/accountBalance";
 import { useQueryClient } from "@tanstack/react-query";
+import { usePlan } from "@/hooks/usePlan";
+import { UpgradeModal } from "./UpgradeModal";
 
 interface Account {
   id: number;
@@ -32,7 +34,9 @@ interface TransactionDialogProps {
 
 export function TransactionDialog({ open, onOpenChange, onSuccess }: TransactionDialogProps) {
   const queryClient = useQueryClient();
+  const { canAddTransaction, incrementUsage, usage, limits } = usePlan();
   const [loading, setLoading] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [formData, setFormData] = useState({
@@ -88,6 +92,12 @@ export function TransactionDialog({ open, onOpenChange, onSuccess }: Transaction
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Check plan limit before allowing transaction
+    if (!canAddTransaction) {
+      setShowUpgradeModal(true);
+      return;
+    }
     
     const validation = transactionSchema.safeParse(formData);
     if (!validation.success) {
@@ -123,6 +133,9 @@ export function TransactionDialog({ open, onOpenChange, onSuccess }: Transaction
       // Recalculate account balance
       await recalculateAccountBalance(accountId);
       
+      // Increment usage count
+      await incrementUsage('transactions');
+
       // Invalidate queries
       queryClient.invalidateQueries({ queryKey: ["transactions-infinite"] });
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
@@ -150,14 +163,25 @@ export function TransactionDialog({ open, onOpenChange, onSuccess }: Transaction
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>Nova Transação</DialogTitle>
-          <DialogDescription>
-            Adicione uma nova receita ou despesa
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <UpgradeModal 
+        open={showUpgradeModal} 
+        onOpenChange={setShowUpgradeModal}
+        feature="adicionar mais transações"
+      />
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Nova Transação</DialogTitle>
+            <DialogDescription>
+              Adicione uma nova receita ou despesa
+              {limits.transactionsPerMonth !== Infinity && (
+                <span className="block text-xs mt-1">
+                  {usage.transactionsCount}/{limits.transactionsPerMonth} transações usadas este mês
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -277,5 +301,6 @@ export function TransactionDialog({ open, onOpenChange, onSuccess }: Transaction
         </form>
       </DialogContent>
     </Dialog>
+    </>
   );
 }

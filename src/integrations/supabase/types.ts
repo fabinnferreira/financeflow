@@ -290,16 +290,31 @@ export type Database = {
         Row: {
           id: string
           name: string | null
+          plan: string
+          plan_started_at: string | null
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          trial_ends_at: string | null
           updated_at: string | null
         }
         Insert: {
           id: string
           name?: string | null
+          plan?: string
+          plan_started_at?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          trial_ends_at?: string | null
           updated_at?: string | null
         }
         Update: {
           id?: string
           name?: string | null
+          plan?: string
+          plan_started_at?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          trial_ends_at?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -375,6 +390,42 @@ export type Database = {
         Update: {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_usage: {
+        Row: {
+          accounts_count: number | null
+          cards_count: number | null
+          created_at: string | null
+          goals_count: number | null
+          id: string
+          month_year: string
+          transactions_count: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          accounts_count?: number | null
+          cards_count?: number | null
+          created_at?: string | null
+          goals_count?: number | null
+          id?: string
+          month_year: string
+          transactions_count?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          accounts_count?: number | null
+          cards_count?: number | null
+          created_at?: string | null
+          goals_count?: number | null
+          id?: string
+          month_year?: string
+          transactions_count?: number | null
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: []
