@@ -5,11 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { User, Lock, Trash2, Save, Loader2 } from "lucide-react";
+import { User, Lock, Trash2, Save, Loader2, Crown, CreditCard } from "lucide-react";
 import DynamicBackground from "@/components/DynamicBackground";
 import { PageHeader } from "@/components/PageHeader";
 import { toast } from "sonner";
 import { z } from "zod";
+import { usePlan } from "@/hooks/usePlan";
+import { UsageIndicator } from "@/components/UsageIndicator";
+import { PremiumBadge } from "@/components/PremiumBadge";
+import { UpgradeModal } from "@/components/UpgradeModal";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,10 +43,13 @@ const passwordSchema = z.object({
 
 export default function Settings() {
   const navigate = useNavigate();
+  const { plan, usage, limits, subscriptionEnd, refreshPlan, isLoading: planLoading } = usePlan();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [managingSubscription, setManagingSubscription] = useState(false);
   
   // Profile data
   const [name, setName] = useState("");
@@ -186,6 +195,22 @@ export default function Settings() {
     }
   };
 
+  const handleManageSubscription = async () => {
+    setManagingSubscription(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("customer-portal");
+      if (error) throw error;
+      if (data?.url) {
+        window.open(data.url, "_blank");
+      }
+    } catch (error) {
+      console.error("Error opening portal:", error);
+      toast.error("Erro ao abrir portal de assinatura");
+    } finally {
+      setManagingSubscription(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -197,11 +222,91 @@ export default function Settings() {
   return (
     <div className="min-h-screen relative p-8">
       <DynamicBackground />
+      <UpgradeModal open={showUpgradeModal} onOpenChange={setShowUpgradeModal} />
       <div className="max-w-2xl mx-auto space-y-8 relative z-10">
         <PageHeader
           title="Configurações"
           subtitle="Gerencie seu perfil e preferências"
         />
+
+        {/* Plan Section */}
+        <Card className="animate-fade-in">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Crown className="h-5 w-5" />
+              Seu Plano
+              {plan === "premium" && <PremiumBadge className="ml-2" />}
+            </CardTitle>
+            <CardDescription>
+              {plan === "premium" 
+                ? "Você tem acesso a todos os recursos premium"
+                : "Faça upgrade para desbloquear todos os recursos"
+              }
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
+              <div>
+                <h3 className="font-semibold capitalize">{plan === "premium" ? "Premium" : "Gratuito"}</h3>
+                {plan === "premium" && subscriptionEnd && (
+                  <p className="text-sm text-muted-foreground">
+                    Renova em {format(new Date(subscriptionEnd), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                  </p>
+                )}
+                {plan === "free" && (
+                  <p className="text-sm text-muted-foreground">
+                    R$ 0/mês
+                  </p>
+                )}
+              </div>
+              {plan === "premium" ? (
+                <Button 
+                  variant="outline" 
+                  onClick={handleManageSubscription}
+                  disabled={managingSubscription}
+                >
+                  {managingSubscription ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <CreditCard className="h-4 w-4 mr-2" />
+                  )}
+                  Gerenciar Assinatura
+                </Button>
+              ) : (
+                <Button variant="success" onClick={() => setShowUpgradeModal(true)}>
+                  <Crown className="h-4 w-4 mr-2" />
+                  Fazer Upgrade
+                </Button>
+              )}
+            </div>
+
+            {plan === "free" && (
+              <div className="space-y-4">
+                <h4 className="text-sm font-medium">Uso do mês</h4>
+                <UsageIndicator
+                  current={usage.transactionsCount}
+                  max={limits.transactionsPerMonth}
+                  label="Transações"
+                />
+                <UsageIndicator
+                  current={usage.accountsCount}
+                  max={limits.accounts}
+                  label="Contas"
+                />
+                <UsageIndicator
+                  current={usage.cardsCount}
+                  max={limits.creditCards}
+                  label="Cartões de crédito"
+                />
+                <UsageIndicator
+                  current={usage.goalsCount}
+                  max={limits.goals}
+                  label="Metas financeiras"
+                />
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Profile Section */}
         <Card className="animate-fade-in">

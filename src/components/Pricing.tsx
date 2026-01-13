@@ -1,25 +1,29 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check, Sparkles } from "lucide-react";
+import { Check, Sparkles, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const plans = [
   {
     name: "Gratuito",
     price: "R$ 0",
     period: "para sempre",
-    description: "Perfeito para começar a organizar suas finanças",
+    description: "Perfeito para conhecer o FinanceFlow",
     features: [
-      "Até 3 contas bancárias",
-      "Até 2 cartões de crédito",
+      "3 transações por mês",
+      "1 conta bancária",
+      "1 cartão de crédito",
+      "1 meta financeira",
+      "Histórico de 3 meses",
       "Categorias básicas",
-      "Histórico de 6 meses",
-      "Relatórios mensais",
-      "Suporte por email",
     ],
     cta: "Começar Grátis",
     highlighted: false,
     variant: "outline" as const,
+    isPremium: false,
   },
   {
     name: "Premium",
@@ -27,24 +31,52 @@ const plans = [
     period: "/mês",
     description: "Para quem quer controle total e insights avançados",
     features: [
+      "Transações ilimitadas",
       "Contas ilimitadas",
       "Cartões ilimitados",
-      "Categorias personalizadas",
+      "Metas financeiras ilimitadas",
       "Histórico ilimitado",
       "Relatórios avançados com gráficos",
       "Exportação de dados (PDF/Excel)",
-      "Metas financeiras",
+      "Conexão bancária automática",
       "Alertas e notificações",
       "Suporte prioritário",
-      "Novos recursos primeiro",
     ],
     cta: "Assinar Premium",
     highlighted: true,
     variant: "success" as const,
+    isPremium: true,
   },
 ];
 
 const Pricing = () => {
+  const [loadingPremium, setLoadingPremium] = useState(false);
+
+  const handlePremiumClick = async () => {
+    setLoadingPremium(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        // Not logged in, redirect to auth
+        window.location.href = "/auth?redirect=premium";
+        return;
+      }
+
+      // Create checkout session
+      const { data, error } = await supabase.functions.invoke("create-checkout");
+      if (error) throw error;
+      if (data?.url) {
+        window.open(data.url, "_blank");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      toast.error("Erro ao iniciar checkout. Faça login e tente novamente.");
+    } finally {
+      setLoadingPremium(false);
+    }
+  };
+
   return (
     <section id="precos" className="py-24 bg-background">
       <div className="container mx-auto px-4">
@@ -107,16 +139,35 @@ const Pricing = () => {
               </CardContent>
 
               <CardFooter>
-                <Button 
-                  variant={plan.variant} 
-                  size="lg" 
-                  className="w-full"
-                  asChild
-                >
-                  <Link to="/auth">
-                    {plan.cta}
-                  </Link>
-                </Button>
+                {plan.isPremium ? (
+                  <Button 
+                    variant={plan.variant} 
+                    size="lg" 
+                    className="w-full"
+                    onClick={handlePremiumClick}
+                    disabled={loadingPremium}
+                  >
+                    {loadingPremium ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Carregando...
+                      </>
+                    ) : (
+                      plan.cta
+                    )}
+                  </Button>
+                ) : (
+                  <Button 
+                    variant={plan.variant} 
+                    size="lg" 
+                    className="w-full"
+                    asChild
+                  >
+                    <Link to="/auth">
+                      {plan.cta}
+                    </Link>
+                  </Button>
+                )}
               </CardFooter>
             </Card>
           ))}
