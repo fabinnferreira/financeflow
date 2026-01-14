@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Bell, Check, Trash2, CreditCard, AlertTriangle, Info } from "lucide-react";
+import { Bell, Check, Trash2, CreditCard, AlertTriangle, Info, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { usePlan } from "@/hooks/usePlan";
 
 interface Notification {
   id: string;
@@ -23,8 +24,14 @@ export function NotificationCenter() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  const { hasNotifications } = usePlan();
 
   useEffect(() => {
+    if (!hasNotifications) {
+      setLoading(false);
+      return;
+    }
+
     let channel: ReturnType<typeof supabase.channel> | null = null;
 
     const setupSubscription = async () => {
@@ -57,7 +64,7 @@ export function NotificationCenter() {
         supabase.removeChannel(channel);
       }
     };
-  }, []);
+  }, [hasNotifications]);
 
   const fetchNotifications = async () => {
     setLoading(true);

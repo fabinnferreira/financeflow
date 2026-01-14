@@ -14,6 +14,9 @@ import { toast } from "sonner";
 import DynamicBackground from "@/components/DynamicBackground";
 import { PageHeader } from "@/components/PageHeader";
 import { formatCurrency } from "@/lib/formatters";
+import { usePlan } from "@/hooks/usePlan";
+import { UpgradeModal } from "@/components/UpgradeModal";
+import { UsageIndicator } from "@/components/UsageIndicator";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,11 +53,14 @@ const CreditCards = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingCard, setEditingCard] = useState<CreditCardDetails | null>(null);
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     account_id: "",
     closing_day: "1",
     due_day: "10",
   });
+
+  const { plan, canAddCreditCard, usage, limits, incrementUsage } = usePlan();
 
   useEffect(() => {
     fetchData();
@@ -118,8 +124,25 @@ const CreditCards = () => {
     return creditCardAccounts.filter(acc => !configuredAccountIds.includes(acc.id));
   };
 
+  const handleOpenDialog = () => {
+    if (!canAddCreditCard) {
+      setUpgradeModalOpen(true);
+      return;
+    }
+    if (getAvailableAccounts().length === 0) {
+      toast.error("Não há cartões disponíveis para configurar");
+      return;
+    }
+    setDialogOpen(true);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!canAddCreditCard) {
+      setUpgradeModalOpen(true);
+      return;
+    }
 
     if (!formData.account_id) {
       toast.error("Selecione uma conta de cartão de crédito");
@@ -155,6 +178,7 @@ const CreditCards = () => {
 
       if (error) throw error;
 
+      await incrementUsage('cards');
       toast.success("Configuração de cartão salva com sucesso!");
       resetForm();
       setDialogOpen(false);
@@ -370,26 +394,39 @@ const CreditCards = () => {
           showBack
           backTo="/dashboard"
           actions={
-            <Dialog open={dialogOpen} onOpenChange={(open) => {
-              setDialogOpen(open);
-              if (!open) resetForm();
-            }}>
-              <DialogTrigger asChild>
-                <Button disabled={getAvailableAccounts().length === 0}>
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Configurar Cartão
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Configurar Cartão de Crédito</DialogTitle>
-                  <DialogDescription>
-                    Defina as datas de fechamento e vencimento do cartão
-                  </DialogDescription>
-                </DialogHeader>
-                <CardForm onSubmit={handleSubmit} submitLabel="Salvar" />
-              </DialogContent>
-            </Dialog>
+            <div className="flex items-center gap-4">
+              {plan === "free" && (
+                <UsageIndicator
+                  current={usage.cardsCount}
+                  max={limits.creditCards}
+                  label="cartões"
+                />
+              )}
+              <Dialog open={dialogOpen} onOpenChange={(open) => {
+                if (open && !canAddCreditCard) {
+                  setUpgradeModalOpen(true);
+                  return;
+                }
+                setDialogOpen(open);
+                if (!open) resetForm();
+              }}>
+                <DialogTrigger asChild>
+                  <Button onClick={handleOpenDialog} disabled={getAvailableAccounts().length === 0 && canAddCreditCard}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Configurar Cartão
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Configurar Cartão de Crédito</DialogTitle>
+                    <DialogDescription>
+                      Defina as datas de fechamento e vencimento do cartão
+                    </DialogDescription>
+                  </DialogHeader>
+                  <CardForm onSubmit={handleSubmit} submitLabel="Salvar" />
+                </DialogContent>
+              </Dialog>
+            </div>
           }
         />
 
@@ -438,7 +475,7 @@ const CreditCards = () => {
               <p className="text-muted-foreground mb-4">
                 Nenhum cartão configurado ainda
               </p>
-              <Button variant="outline" onClick={() => setDialogOpen(true)}>
+              <Button variant="outline" onClick={handleOpenDialog}>
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Configurar primeiro cartão
               </Button>
@@ -566,6 +603,10 @@ const CreditCards = () => {
                       variant="outline" 
                       className="w-full"
                       onClick={() => {
+                        if (!canAddCreditCard) {
+                          setUpgradeModalOpen(true);
+                          return;
+                        }
                         setFormData({ ...formData, account_id: account.id.toString() });
                         setDialogOpen(true);
                       }}
@@ -580,6 +621,12 @@ const CreditCards = () => {
           </div>
         )}
       </div>
+
+      <UpgradeModal 
+        open={upgradeModalOpen} 
+        onOpenChange={setUpgradeModalOpen}
+        feature="configuração de mais cartões"
+      />
     </div>
   );
 };

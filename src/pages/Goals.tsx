@@ -20,6 +20,9 @@ import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Label } from "@/components/ui/label";
 import { formatCurrencyValue } from "@/lib/formatters";
+import { usePlan } from "@/hooks/usePlan";
+import { UpgradeModal } from "@/components/UpgradeModal";
+import { UsageIndicator } from "@/components/UsageIndicator";
 
 interface Goal {
   id: number;
@@ -40,7 +43,10 @@ const Goals = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const navigate = useNavigate();
+
+  const { plan, canAddGoal, usage, limits, incrementUsage } = usePlan();
 
   const form = useForm<GoalFormData>({
     resolver: zodResolver(goalSchema),
@@ -81,8 +87,21 @@ const Goals = () => {
     }
   };
 
+  const handleOpenDialog = () => {
+    if (!editingGoal && !canAddGoal) {
+      setUpgradeModalOpen(true);
+      return;
+    }
+    setDialogOpen(true);
+  };
+
   const onSubmit = async (data: GoalFormData) => {
     try {
+      if (!editingGoal && !canAddGoal) {
+        setUpgradeModalOpen(true);
+        return;
+      }
+
       setSubmitting(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -109,6 +128,7 @@ const Goals = () => {
           .from("financial_goals")
           .insert([goalData]);
         if (error) throw error;
+        await incrementUsage('goals');
         toast.success("Meta criada com sucesso!");
       }
 
@@ -194,52 +214,93 @@ const Goals = () => {
           title="Metas Financeiras"
           subtitle="Defina e acompanhe suas metas de economia"
           actions={
-            <Dialog open={dialogOpen} onOpenChange={(open) => {
-              setDialogOpen(open);
-              if (!open) {
-                setEditingGoal(null);
-                form.reset();
-              }
-            }}>
-              <DialogTrigger asChild>
-                <Button className="gap-2">
-                  <Plus className="w-4 h-4" />
-                  Nova Meta
-                </Button>
-              </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>{editingGoal ? "Editar Meta" : "Nova Meta"}</DialogTitle>
-                <DialogDescription>
-                  {editingGoal ? "Atualize as informações da sua meta" : "Crie uma nova meta financeira para acompanhar seu progresso"}
-                </DialogDescription>
-              </DialogHeader>
+            <div className="flex items-center gap-4">
+              {plan === "free" && (
+                <UsageIndicator
+                  current={usage.goalsCount}
+                  max={limits.goals}
+                  label="metas"
+                />
+              )}
+              <Dialog open={dialogOpen} onOpenChange={(open) => {
+                if (open && !editingGoal && !canAddGoal) {
+                  setUpgradeModalOpen(true);
+                  return;
+                }
+                setDialogOpen(open);
+                if (!open) {
+                  setEditingGoal(null);
+                  form.reset();
+                }
+              }}>
+                <DialogTrigger asChild>
+                  <Button className="gap-2" onClick={handleOpenDialog}>
+                    <Plus className="w-4 h-4" />
+                    Nova Meta
+                  </Button>
+                </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{editingGoal ? "Editar Meta" : "Nova Meta"}</DialogTitle>
+                  <DialogDescription>
+                    {editingGoal ? "Atualize as informações da sua meta" : "Crie uma nova meta financeira para acompanhar seu progresso"}
+                  </DialogDescription>
+                </DialogHeader>
 
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Nome da Meta</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Ex: Viagem de férias" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="grid grid-cols-2 gap-4">
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                     <FormField
                       control={form.control}
-                      name="target_amount"
+                      name="name"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Valor da Meta (R$)</FormLabel>
+                          <FormLabel>Nome da Meta</FormLabel>
                           <FormControl>
-                            <Input type="number" step="0.01" min="0" placeholder="5000.00" {...field} />
+                            <Input placeholder="Ex: Viagem de férias" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="target_amount"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Valor da Meta (R$)</FormLabel>
+                            <FormControl>
+                              <Input type="number" step="0.01" min="0" placeholder="5000.00" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="current_amount"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Valor Atual (R$)</FormLabel>
+                            <FormControl>
+                              <Input type="number" step="0.01" min="0" placeholder="0.00" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <FormField
+                      control={form.control}
+                      name="deadline"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Prazo (opcional)</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -248,97 +309,69 @@ const Goals = () => {
 
                     <FormField
                       control={form.control}
-                      name="current_amount"
+                      name="emoji"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Valor Atual (R$)</FormLabel>
+                          <FormLabel>Emoji</FormLabel>
                           <FormControl>
-                            <Input type="number" step="0.01" min="0" placeholder="0.00" {...field} />
+                            <div className="flex flex-wrap gap-2">
+                              {EMOJI_OPTIONS.map((emoji) => (
+                                <button
+                                  key={emoji}
+                                  type="button"
+                                  onClick={() => field.onChange(emoji)}
+                                  className={`text-2xl p-2 rounded-lg border-2 transition-all ${
+                                    field.value === emoji ? "border-primary bg-primary/10" : "border-transparent hover:bg-accent"
+                                  }`}
+                                >
+                                  {emoji}
+                                </button>
+                              ))}
+                            </div>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                  </div>
 
-                  <FormField
-                    control={form.control}
-                    name="deadline"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Prazo (opcional)</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                    <FormField
+                      control={form.control}
+                      name="color"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Cor</FormLabel>
+                          <FormControl>
+                            <div className="flex flex-wrap gap-2">
+                              {COLOR_OPTIONS.map((color) => (
+                                <button
+                                  key={color}
+                                  type="button"
+                                  onClick={() => field.onChange(color)}
+                                  className={`w-8 h-8 rounded-full border-2 transition-all ${
+                                    field.value === color ? "border-foreground scale-110" : "border-transparent"
+                                  }`}
+                                  style={{ backgroundColor: color }}
+                                />
+                              ))}
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  <FormField
-                    control={form.control}
-                    name="emoji"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Emoji</FormLabel>
-                        <FormControl>
-                          <div className="flex flex-wrap gap-2">
-                            {EMOJI_OPTIONS.map((emoji) => (
-                              <button
-                                key={emoji}
-                                type="button"
-                                onClick={() => field.onChange(emoji)}
-                                className={`text-2xl p-2 rounded-lg border-2 transition-all ${
-                                  field.value === emoji ? "border-primary bg-primary/10" : "border-transparent hover:bg-accent"
-                                }`}
-                              >
-                                {emoji}
-                              </button>
-                            ))}
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="color"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Cor</FormLabel>
-                        <FormControl>
-                          <div className="flex flex-wrap gap-2">
-                            {COLOR_OPTIONS.map((color) => (
-                              <button
-                                key={color}
-                                type="button"
-                                onClick={() => field.onChange(color)}
-                                className={`w-8 h-8 rounded-full border-2 transition-all ${
-                                  field.value === color ? "border-foreground scale-110" : "border-transparent"
-                                }`}
-                                style={{ backgroundColor: color }}
-                              />
-                            ))}
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <DialogFooter>
-                    <Button type="submit" disabled={submitting}>
-                      {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                      {editingGoal ? "Salvar Alterações" : "Criar Meta"}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
-        }
+                    <DialogFooter>
+                      <Button type="submit" disabled={submitting}>
+                        {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                        {editingGoal ? "Salvar Alterações" : "Criar Meta"}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
+            </div>
+          }
         />
 
         {goals.length === 0 ? (
@@ -349,7 +382,7 @@ const Goals = () => {
               <p className="text-muted-foreground mb-4">
                 Comece a definir suas metas financeiras para acompanhar seu progresso
               </p>
-              <Button onClick={() => setDialogOpen(true)}>
+              <Button onClick={handleOpenDialog}>
                 <Plus className="w-4 h-4 mr-2" />
                 Criar Primeira Meta
               </Button>
@@ -496,6 +529,12 @@ const Goals = () => {
           </div>
         )}
       </div>
+
+      <UpgradeModal 
+        open={upgradeModalOpen} 
+        onOpenChange={setUpgradeModalOpen}
+        feature="criação de mais metas"
+      />
     </div>
   );
 };
