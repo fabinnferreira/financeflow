@@ -21,6 +21,9 @@ import DynamicBackground from '@/components/DynamicBackground';
 import { PluggyConnectWidget } from '@/components/PluggyConnectWidget';
 import { PageHeader } from '@/components/PageHeader';
 import { formatCurrency, formatDateWithTime } from '@/lib/formatters';
+import { usePlan } from '@/hooks/usePlan';
+import { PremiumLock } from '@/components/PremiumLock';
+import { UpgradeModal } from '@/components/UpgradeModal';
 
 interface PluggyAccount {
   id: string;
@@ -49,8 +52,16 @@ export default function BankConnections() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [pendingReviewCount, setPendingReviewCount] = useState(0);
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+
+  const { hasOpenBanking } = usePlan();
 
   const fetchConnections = useCallback(async () => {
+    if (!hasOpenBanking) {
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const [connectionsRes, reviewCountRes] = await Promise.all([
         supabase.functions.invoke('pluggy', {
@@ -71,7 +82,7 @@ export default function BankConnections() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [hasOpenBanking]);
 
   useEffect(() => {
     fetchConnections();
@@ -100,7 +111,6 @@ export default function BankConnections() {
   const handleSync = async (connectionId: string) => {
     setSyncingId(connectionId);
     try {
-      // Get last 90 days of transactions
       const from = new Date();
       from.setDate(from.getDate() - 90);
       
@@ -146,8 +156,6 @@ export default function BankConnections() {
     }
   };
 
-  // Usando formatDateWithTime centralizado do @/lib/formatters
-
   const getAccountIcon = (type: string) => {
     switch (type) {
       case 'CREDIT':
@@ -172,6 +180,29 @@ export default function BankConnections() {
         return <Badge variant="outline">{status}</Badge>;
     }
   };
+
+  // Show premium lock for free users
+  if (!hasOpenBanking) {
+    return (
+      <div className="min-h-screen relative p-8">
+        <DynamicBackground />
+        <div className="relative z-10 max-w-7xl mx-auto space-y-8">
+          <PageHeader
+            title="Conexões Bancárias"
+            subtitle="Conecte suas contas bancárias via Open Banking"
+            showBack
+            backTo="/dashboard"
+          />
+          <PremiumLock
+            title="Open Banking é Premium"
+            description="Conecte suas contas bancárias automaticamente e importe transações em tempo real com o plano Premium."
+            onUpgrade={() => setUpgradeModalOpen(true)}
+          />
+        </div>
+        <UpgradeModal open={upgradeModalOpen} onOpenChange={setUpgradeModalOpen} feature="Open Banking" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen relative p-8">

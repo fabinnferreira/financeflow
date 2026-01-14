@@ -19,7 +19,9 @@ interface PlanData {
   canAddAccount: boolean;
   canAddCreditCard: boolean;
   canAddGoal: boolean;
+  canAddCategory: (currentCount: number) => boolean;
   hasExport: boolean;
+  hasNotifications: boolean;
   hasOpenBanking: boolean;
   hasAdvancedReports: boolean;
   subscriptionEnd: string | null;
@@ -166,7 +168,9 @@ export function usePlan(): PlanData {
     canAddAccount: usage.accountsCount < limits.accounts,
     canAddCreditCard: usage.cardsCount < limits.creditCards,
     canAddGoal: usage.goalsCount < limits.goals,
+    canAddCategory: (currentCount: number) => currentCount < limits.categories,
     hasExport: limits.hasExport,
+    hasNotifications: limits.hasNotifications,
     hasOpenBanking: limits.hasOpenBanking,
     hasAdvancedReports: limits.hasAdvancedReports,
     subscriptionEnd,

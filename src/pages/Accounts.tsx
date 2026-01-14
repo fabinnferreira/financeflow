@@ -15,6 +15,9 @@ import DynamicBackground from '@/components/DynamicBackground';
 import { PageHeader } from '@/components/PageHeader';
 import { accountSchema } from '@/lib/validations';
 import { formatCurrency } from '@/lib/formatters';
+import { usePlan } from '@/hooks/usePlan';
+import { UpgradeModal } from '@/components/UpgradeModal';
+import { UsageIndicator } from '@/components/UsageIndicator';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,11 +46,14 @@ const Accounts = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     type: 'bank',
     balance: '0'
   });
+
+  const { plan, canAddAccount, usage, limits, incrementUsage } = usePlan();
 
   const fetchAccounts = async () => {
     setLoading(true);
@@ -76,9 +82,22 @@ const Accounts = () => {
     setFormData({ name: '', type: 'bank', balance: '0' });
   };
 
+  const handleOpenDialog = () => {
+    if (!canAddAccount) {
+      setUpgradeModalOpen(true);
+      return;
+    }
+    setDialogOpen(true);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!canAddAccount) {
+      setUpgradeModalOpen(true);
+      return;
+    }
+
     const validation = accountSchema.safeParse(formData);
     if (!validation.success) {
       const firstError = validation.error.errors[0];
@@ -107,6 +126,7 @@ const Accounts = () => {
 
       if (error) throw error;
 
+      await incrementUsage('accounts');
       toast.success('Conta criada com sucesso!');
       setDialogOpen(false);
       resetForm();
@@ -209,8 +229,6 @@ const Accounts = () => {
         return <Landmark className="h-5 w-5" />;
     }
   };
-
-  // Removed duplicate formatCurrency - using import from @/lib/formatters
 
   const AccountForm = ({ onSubmit, submitLabel }: { onSubmit: (e: React.FormEvent) => void; submitLabel: string }) => (
     <form onSubmit={onSubmit} className="space-y-4">
@@ -360,26 +378,39 @@ const Accounts = () => {
           title="Minhas Contas"
           subtitle="Gerencie suas contas bancárias, cartões e dinheiro"
           actions={
-            <Dialog open={dialogOpen} onOpenChange={(open) => {
-              setDialogOpen(open);
-              if (!open) resetForm();
-            }}>
-              <DialogTrigger asChild>
-                <Button>
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Nova Conta
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Adicionar Nova Conta</DialogTitle>
-                  <DialogDescription>
-                    Adicione uma nova conta para organizar suas finanças
-                  </DialogDescription>
-                </DialogHeader>
-                <AccountForm onSubmit={handleSubmit} submitLabel="Criar" />
-              </DialogContent>
-            </Dialog>
+            <div className="flex items-center gap-4">
+              {plan === "free" && (
+                <UsageIndicator
+                  current={usage.accountsCount}
+                  max={limits.accounts}
+                  label="contas"
+                />
+              )}
+              <Dialog open={dialogOpen} onOpenChange={(open) => {
+                if (open && !canAddAccount) {
+                  setUpgradeModalOpen(true);
+                  return;
+                }
+                setDialogOpen(open);
+                if (!open) resetForm();
+              }}>
+                <DialogTrigger asChild>
+                  <Button onClick={handleOpenDialog}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Nova Conta
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Adicionar Nova Conta</DialogTitle>
+                    <DialogDescription>
+                      Adicione uma nova conta para organizar suas finanças
+                    </DialogDescription>
+                  </DialogHeader>
+                  <AccountForm onSubmit={handleSubmit} submitLabel="Criar" />
+                </DialogContent>
+              </Dialog>
+            </div>
           }
         />
 
@@ -428,6 +459,12 @@ const Accounts = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      <UpgradeModal 
+        open={upgradeModalOpen} 
+        onOpenChange={setUpgradeModalOpen}
+        feature="criação de mais contas"
+      />
     </div>
   );
 };
