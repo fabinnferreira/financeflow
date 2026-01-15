@@ -7,13 +7,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PlusCircle, Edit, Trash, Loader2 } from "lucide-react";
+import { PlusCircle, Edit, Trash, Loader2, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import DynamicBackground from "@/components/DynamicBackground";
 import { PageHeader } from "@/components/PageHeader";
 import { toast } from "sonner";
 import { categorySchema } from "@/lib/validations";
+import { usePlan } from "@/hooks/usePlan";
+import { UsageIndicator } from "@/components/UsageIndicator";
+import { UpgradeModal } from "@/components/UpgradeModal";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,6 +44,7 @@ const Categories = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     emoji: "",
@@ -48,6 +52,7 @@ const Categories = () => {
     type: "expense",
   });
   const navigate = useNavigate();
+  const { plan, limits, canAddCategory } = usePlan();
 
   useEffect(() => {
     fetchCategories();
@@ -358,6 +363,16 @@ const Categories = () => {
     </form>
   );
 
+  const canCreate = canAddCategory(categories.length);
+
+  const handleNewCategory = () => {
+    if (!canCreate) {
+      setUpgradeModalOpen(true);
+      return;
+    }
+    setDialogOpen(true);
+  };
+
   return (
     <div className="min-h-screen relative p-8">
       <DynamicBackground />
@@ -366,27 +381,47 @@ const Categories = () => {
           title="Minhas Categorias"
           subtitle="Organize suas transações por categoria"
           actions={
-            <Dialog open={dialogOpen} onOpenChange={(open) => {
-              setDialogOpen(open);
-              if (!open) resetForm();
-            }}>
-              <DialogTrigger asChild>
-                <Button variant="success" className="gap-2">
-                  <PlusCircle className="w-5 h-5" />
-                  Nova Categoria
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Criar Nova Categoria</DialogTitle>
-                  <DialogDescription>
-                    Adicione uma nova categoria para organizar suas transações
-                  </DialogDescription>
-                </DialogHeader>
-                <CategoryForm onSubmit={handleSubmit} submitLabel="Criar" />
-              </DialogContent>
-            </Dialog>
+            <div className="flex items-center gap-4">
+              {plan === "free" && (
+                <UsageIndicator 
+                  current={categories.length} 
+                  max={limits.categories} 
+                  label="Categorias" 
+                />
+              )}
+              <Button 
+                variant="success" 
+                className="gap-2"
+                onClick={handleNewCategory}
+              >
+                {!canCreate && <Lock className="w-4 h-4" />}
+                <PlusCircle className="w-5 h-5" />
+                Nova Categoria
+              </Button>
+            </div>
           }
+        />
+
+        {/* Create Dialog */}
+        <Dialog open={dialogOpen} onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) resetForm();
+        }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Criar Nova Categoria</DialogTitle>
+              <DialogDescription>
+                Adicione uma nova categoria para organizar suas transações
+              </DialogDescription>
+            </DialogHeader>
+            <CategoryForm onSubmit={handleSubmit} submitLabel="Criar" />
+          </DialogContent>
+        </Dialog>
+
+        <UpgradeModal 
+          open={upgradeModalOpen} 
+          onOpenChange={setUpgradeModalOpen}
+          feature="categorias ilimitadas"
         />
 
       {/* Edit Dialog */}

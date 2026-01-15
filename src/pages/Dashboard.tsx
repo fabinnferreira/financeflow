@@ -267,15 +267,40 @@ const Dashboard = () => {
             </Card>
 
             {/* Expenses by Category */}
-            <Card className="shadow-lg animate-slide-up" style={{ animationDelay: '0.1s' }}>
+            <Card className="shadow-lg animate-slide-up relative" style={{ animationDelay: '0.1s' }}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <TrendingUp className="w-5 h-5 text-primary" />
                   Despesas por Categoria
+                  {plan === "free" && (
+                    <span className="ml-2 text-xs bg-gradient-to-r from-amber-500 to-orange-500 text-white px-2 py-0.5 rounded-full">
+                      Premium
+                    </span>
+                  )}
                 </CardTitle>
                 <CardDescription>Distribuição dos seus gastos - {getPeriodLabel()}</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className={plan === "free" ? "relative" : ""}>
+                {plan === "free" && (
+                  <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center rounded-b-lg">
+                    <div className="text-center p-6">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 flex items-center justify-center mx-auto mb-4">
+                        <TrendingUp className="w-6 h-6 text-white" />
+                      </div>
+                      <h3 className="text-lg font-semibold mb-2">Gráfico Premium</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Faça upgrade para ver análises detalhadas por categoria
+                      </p>
+                      <Button 
+                        size="sm"
+                        className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
+                        onClick={() => navigate("/settings")}
+                      >
+                        Fazer Upgrade
+                      </Button>
+                    </div>
+                  </div>
+                )}
                 {categoryTotals.length === 0 ? (
                   <div className="text-center py-12">
                     <p className="text-muted-foreground">Nenhuma despesa registrada neste período</p>

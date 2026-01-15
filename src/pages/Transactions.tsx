@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowUpRight, ArrowDownRight, FileDown, MoreHorizontal, Search, X, Filter, FileSpreadsheet, FileText, Pencil, Loader2 } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, FileDown, MoreHorizontal, Search, X, Filter, FileSpreadsheet, FileText, Pencil, Loader2, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -20,7 +20,7 @@ import DynamicBackground from "@/components/DynamicBackground";
 import { PageHeader } from "@/components/PageHeader";
 import { toast } from "sonner";
 import { DateRangePicker } from "@/components/DateRangePicker";
-import { startOfMonth, endOfMonth, isWithinInterval, parseISO, format } from "date-fns";
+import { startOfMonth, endOfMonth, isWithinInterval, parseISO, format, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { exportTransactionsToPDF } from "@/utils/exportPDF";
 import { exportTransactionsToExcel } from "@/utils/exportExcel";
@@ -38,6 +38,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useTransactionsInfinite, useCategories, useDeleteTransaction, Transaction } from "@/hooks/useTransactions";
 import { formatCurrency, formatDate } from "@/lib/formatters";
+import { usePlan } from "@/hooks/usePlan";
+import { UpgradeModal } from "@/components/UpgradeModal";
 
 export default function Transactions() {
   const navigate = useNavigate();
@@ -60,14 +62,23 @@ export default function Transactions() {
   
   const totalCount = data?.pages[0]?.totalCount || 0;
   
+  // Plan limits
+  const { plan, limits, hasExport } = usePlan();
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  
   // Edit dialog
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   
+  // For free users, limit to last 3 months
+  const minDate = plan === "free" ? subMonths(new Date(), limits.historyMonths) : undefined;
+  
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [startDate, setStartDate] = useState<Date>(startOfMonth(new Date()));
+  const [startDate, setStartDate] = useState<Date>(
+    plan === "free" ? subMonths(new Date(), limits.historyMonths) : startOfMonth(new Date())
+  );
   const [endDate, setEndDate] = useState<Date>(endOfMonth(new Date()));
   const [showFilters, setShowFilters] = useState(false);
 
@@ -131,6 +142,10 @@ export default function Transactions() {
   };
 
   const handleExportPDF = () => {
+    if (!hasExport) {
+      setUpgradeModalOpen(true);
+      return;
+    }
     const summary = getExportSummary();
     const fileName = `transacoes_${format(new Date(), "yyyy-MM-dd")}`;
     exportTransactionsToPDF(filteredTransactions, summary, fileName);
@@ -138,6 +153,10 @@ export default function Transactions() {
   };
 
   const handleExportExcel = () => {
+    if (!hasExport) {
+      setUpgradeModalOpen(true);
+      return;
+    }
     const summary = getExportSummary();
     const fileName = `transacoes_${format(new Date(), "yyyy-MM-dd")}`;
     exportTransactionsToExcel(filteredTransactions, summary, fileName);
@@ -253,11 +272,12 @@ export default function Transactions() {
       <div className="max-w-7xl mx-auto space-y-8 relative z-10">
         <PageHeader
           title="Minhas Transações"
-          subtitle="Gerencie todas as suas movimentações financeiras"
+          subtitle={plan === "free" ? `Histórico limitado aos últimos ${limits.historyMonths} meses` : "Gerencie todas as suas movimentações financeiras"}
           actions={
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="gap-2">
+                  {!hasExport && <Lock className="h-4 w-4" />}
                   <FileDown className="h-4 w-4" />
                   Exportar
                 </Button>
@@ -266,11 +286,13 @@ export default function Transactions() {
                 <DropdownMenuItem onClick={handleExportPDF} className="gap-2">
                   <FileText className="h-4 w-4" />
                   Exportar PDF
+                  {!hasExport && <Lock className="h-3 w-3 ml-2" />}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleExportExcel} className="gap-2">
                   <FileSpreadsheet className="h-4 w-4" />
                   Exportar Excel
+                  {!hasExport && <Lock className="h-3 w-3 ml-2" />}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -408,6 +430,12 @@ export default function Transactions() {
           setEditDialogOpen(false);
           setSelectedTransaction(null);
         }}
+      />
+      
+      <UpgradeModal 
+        open={upgradeModalOpen} 
+        onOpenChange={setUpgradeModalOpen}
+        feature="exportação de transações"
       />
     </div>
   );
