@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, BarChart3, Download, FileText, FileSpreadsheet } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, BarChart3, Download, FileText, FileSpreadsheet, Lock, Crown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { PieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, ResponsiveContainer, AreaChart, Area } from "recharts";
@@ -18,6 +18,9 @@ import { toast } from "sonner";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
+import { usePlan } from "@/hooks/usePlan";
+import { UpgradeModal } from "@/components/UpgradeModal";
+import { PremiumOverlay } from "@/components/PremiumLock";
 
 interface MonthlyData {
   month: string;
@@ -37,11 +40,13 @@ interface CategoryTotal {
 
 const Reports = () => {
   const [loading, setLoading] = useState(true);
-  const [monthsToShow, setMonthsToShow] = useState<string>("6");
+  const [monthsToShow, setMonthsToShow] = useState<string>("3");
   const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
   const [categoryTotals, setCategoryTotals] = useState<CategoryTotal[]>([]);
   const [incomeCategoryTotals, setIncomeCategoryTotals] = useState<CategoryTotal[]>([]);
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const navigate = useNavigate();
+  const { plan, limits, hasExport, hasAdvancedReports } = usePlan();
 
   useEffect(() => {
     loadReportData();
@@ -355,6 +360,27 @@ const Reports = () => {
     );
   }
 
+  const handleExportClick = (type: 'pdf' | 'excel') => {
+    if (!hasExport) {
+      setUpgradeModalOpen(true);
+      return;
+    }
+    if (type === 'pdf') {
+      handleExportPDF();
+    } else {
+      handleExportExcel();
+    }
+  };
+
+  const handlePeriodChange = (value: string) => {
+    // Free users can only see 3 months
+    if (plan === "free" && value !== "3") {
+      setUpgradeModalOpen(true);
+      return;
+    }
+    setMonthsToShow(value);
+  };
+
   return (
     <div className="min-h-screen relative p-8">
       <DynamicBackground />
@@ -366,37 +392,56 @@ const Reports = () => {
           actions={
             <div className="flex items-center gap-4">
               <span className="text-sm font-medium">Período:</span>
-              <Select value={monthsToShow} onValueChange={setMonthsToShow}>
+              <Select value={monthsToShow} onValueChange={handlePeriodChange}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="3">Últimos 3 meses</SelectItem>
-                  <SelectItem value="6">Últimos 6 meses</SelectItem>
-                  <SelectItem value="12">Último ano</SelectItem>
+                  <SelectItem value="6" disabled={plan === "free"}>
+                    <div className="flex items-center gap-2">
+                      Últimos 6 meses
+                      {plan === "free" && <Lock className="h-3 w-3" />}
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="12" disabled={plan === "free"}>
+                    <div className="flex items-center gap-2">
+                      Último ano
+                      {plan === "free" && <Lock className="h-3 w-3" />}
+                    </div>
+                  </SelectItem>
                 </SelectContent>
               </Select>
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="gap-2">
+                    {!hasExport && <Lock className="h-4 w-4" />}
                     <Download className="h-4 w-4" />
                     Exportar
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={handleExportPDF}>
+                  <DropdownMenuItem onClick={() => handleExportClick('pdf')}>
                     <FileText className="h-4 w-4 mr-2" />
                     Exportar PDF
+                    {!hasExport && <Lock className="h-3 w-3 ml-2" />}
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleExportExcel}>
+                  <DropdownMenuItem onClick={() => handleExportClick('excel')}>
                     <FileSpreadsheet className="h-4 w-4 mr-2" />
                     Exportar Excel
+                    {!hasExport && <Lock className="h-3 w-3 ml-2" />}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
           }
+        />
+
+        <UpgradeModal 
+          open={upgradeModalOpen} 
+          onOpenChange={setUpgradeModalOpen}
+          feature="relatórios avançados e exportação"
         />
 
         {/* Summary Cards */}
