@@ -23,6 +23,7 @@ import { formatCurrencyValue } from "@/lib/formatters";
 import { usePlan } from "@/hooks/usePlan";
 import { UpgradeBanner } from "@/components/UpgradeBanner";
 import { TrialBanner } from "@/components/TrialBanner";
+import { OnboardingFlow } from "@/components/OnboardingFlow";
 import { toast } from "sonner";
 
 const Dashboard = () => {
@@ -349,6 +350,9 @@ const Dashboard = () => {
         </div>
 
         <TransactionDialog open={dialogOpen} onOpenChange={setDialogOpen} onSuccess={handleTransactionSuccess} />
+        
+        {/* Onboarding for trial users */}
+        <OnboardingFlow isOnTrial={isOnTrial} trialDaysRemaining={trialDaysRemaining} />
       </div>
     </div>
   );
