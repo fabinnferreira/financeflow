@@ -22,6 +22,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { formatCurrencyValue } from "@/lib/formatters";
 import { usePlan } from "@/hooks/usePlan";
 import { UpgradeBanner } from "@/components/UpgradeBanner";
+import { TrialBanner } from "@/components/TrialBanner";
 import { toast } from "sonner";
 
 const Dashboard = () => {
@@ -32,7 +33,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const { plan, refreshPlan } = usePlan();
+  const { plan, isOnTrial, trialEndsAt, trialDaysRemaining, refreshPlan } = usePlan();
 
   // Handle upgrade success/cancel
   useEffect(() => {
@@ -142,8 +143,17 @@ const Dashboard = () => {
         </header>
 
         <div className="container mx-auto px-4 py-8">
-          {/* Upgrade Banner for free users */}
-          {plan === "free" && <UpgradeBanner className="mb-6" />}
+          {/* Trial Banner for users on trial */}
+          {isOnTrial && trialEndsAt && trialDaysRemaining !== null && (
+            <TrialBanner 
+              trialEndsAt={trialEndsAt} 
+              daysRemaining={trialDaysRemaining} 
+              className="mb-6" 
+            />
+          )}
+          
+          {/* Upgrade Banner for free users (not on trial) */}
+          {plan === "free" && !isOnTrial && <UpgradeBanner className="mb-6" />}
 
           {/* Date Filter */}
           <Card className="mb-6 animate-fade-in">

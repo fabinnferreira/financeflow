@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PLAN_LIMITS, PlanType } from "@/lib/planLimits";
-import { format } from "date-fns";
+import { format, differenceInDays, parseISO, isFuture } from "date-fns";
 
 interface Usage {
   transactionsCount: number;
@@ -25,6 +25,10 @@ interface PlanData {
   hasOpenBanking: boolean;
   hasAdvancedReports: boolean;
   subscriptionEnd: string | null;
+  // Trial info
+  isOnTrial: boolean;
+  trialEndsAt: string | null;
+  trialDaysRemaining: number | null;
   refreshPlan: () => Promise<void>;
   incrementUsage: (type: 'transactions' | 'accounts' | 'cards' | 'goals') => Promise<void>;
 }
@@ -35,6 +39,7 @@ export function usePlan(): PlanData {
   const [plan, setPlan] = useState<PlanType>("free");
   const [isLoading, setIsLoading] = useState(true);
   const [subscriptionEnd, setSubscriptionEnd] = useState<string | null>(null);
+  const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
   const [usage, setUsage] = useState<Usage>({
     transactionsCount: 0,
     accountsCount: 0,
@@ -50,15 +55,45 @@ export function usePlan(): PlanData {
         return;
       }
 
-      // Fetch profile for plan info
+      // Fetch profile for plan info including trial
       const { data: profile } = await supabase
         .from("profiles")
-        .select("plan, stripe_subscription_id")
+        .select("plan, stripe_subscription_id, trial_ends_at")
         .eq("id", user.id)
         .single();
 
       if (profile) {
-        setPlan((profile.plan as PlanType) || "free");
+        // Check if trial is still active
+        const trialEnd = profile.trial_ends_at;
+        const hasActiveStripeSubscription = !!profile.stripe_subscription_id;
+        
+        if (trialEnd) {
+          setTrialEndsAt(trialEnd);
+          const trialEndDate = parseISO(trialEnd);
+          const isTrialActive = isFuture(trialEndDate);
+          
+          // If on trial and no stripe subscription, check if trial expired
+          if (!hasActiveStripeSubscription) {
+            if (isTrialActive) {
+              // Trial is still active, use premium
+              setPlan("premium");
+            } else {
+              // Trial expired, downgrade to free
+              if (profile.plan === "premium") {
+                await supabase
+                  .from("profiles")
+                  .update({ plan: "free" })
+                  .eq("id", user.id);
+              }
+              setPlan("free");
+            }
+          } else {
+            // Has active subscription, use plan from profile
+            setPlan((profile.plan as PlanType) || "free");
+          }
+        } else {
+          setPlan((profile.plan as PlanType) || "free");
+        }
       }
 
       // Fetch or create usage for current month
@@ -96,7 +131,7 @@ export function usePlan(): PlanData {
         });
       }
 
-      // Check subscription status from Stripe if premium
+      // Check subscription status from Stripe if premium with stripe subscription
       if (profile?.plan === "premium" && profile?.stripe_subscription_id) {
         try {
           const { data } = await supabase.functions.invoke("check-subscription");
@@ -158,6 +193,15 @@ export function usePlan(): PlanData {
   }, [fetchPlanAndUsage]);
 
   const limits = PLAN_LIMITS[plan];
+  
+  // Calculate trial info
+  const isOnTrial = trialEndsAt 
+    ? isFuture(parseISO(trialEndsAt)) && !subscriptionEnd 
+    : false;
+  
+  const trialDaysRemaining = trialEndsAt && isOnTrial
+    ? Math.max(0, differenceInDays(parseISO(trialEndsAt), new Date()) + 1)
+    : null;
 
   return {
     plan,
@@ -174,6 +218,9 @@ export function usePlan(): PlanData {
     hasOpenBanking: limits.hasOpenBanking,
     hasAdvancedReports: limits.hasAdvancedReports,
     subscriptionEnd,
+    isOnTrial,
+    trialEndsAt,
+    trialDaysRemaining,
     refreshPlan: fetchPlanAndUsage,
     incrementUsage,
   };
