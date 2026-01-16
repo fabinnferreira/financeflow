@@ -10,6 +10,7 @@ import { Check, Crown, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 interface UpgradeModalProps {
   open: boolean;
@@ -31,6 +32,7 @@ const premiumFeatures = [
 
 export function UpgradeModal({ open, onOpenChange, feature }: UpgradeModalProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleUpgrade = async () => {
     setIsLoading(true);
@@ -98,7 +100,18 @@ export function UpgradeModal({ open, onOpenChange, feature }: UpgradeModalProps)
           </Button>
           <Button 
             variant="ghost" 
+            onClick={() => {
+              onOpenChange(false);
+              navigate('/plans');
+            }}
+          >
+            Comparar planos
+          </Button>
+          <Button 
+            variant="link" 
+            size="sm"
             onClick={() => onOpenChange(false)}
+            className="text-muted-foreground"
           >
             Continuar com plano gratuito
           </Button>
