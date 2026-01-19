@@ -25,10 +25,7 @@ const Hero = () => {
               com inteligência
             </h1>
 
-            <p className="text-xl text-muted-foreground leading-relaxed max-w-xl">
-              Transforme sua relação com o dinheiro. Organize receitas, despesas e investimentos em um só lugar. 
-              Decisões financeiras mais inteligentes começam aqui.
-            </p>
+            <p className="text-xl text-muted-foreground leading-relaxed max-w-xl">Transforme sua relação com o dinheiro. Organize receitas, despesas e investimentos em um só lugar. Sua decisões financeiras mais inteligentes começam aqui.</p>
 
             <div className="flex flex-col sm:flex-row gap-4">
               <Button variant="hero" size="xl" className="group" asChild>
