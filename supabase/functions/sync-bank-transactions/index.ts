@@ -16,62 +16,46 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 // Category mapping based on transaction description keywords (expanded)
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
   'Alimentação': [
-    // Delivery apps
     'ifood', 'uber eats', 'rappi', 'zé delivery', 'ze delivery', 'aiqfome', 'james delivery',
-    // Restaurants & fast food
     'restaurante', 'lanchonete', 'pizzaria', 'churrascaria', 'rodizio', 'buffet',
     'mcdonalds', 'burger king', 'subway', 'starbucks', 'habib', 'habibs', 'sushi',
     'bobs', 'kfc', 'popeyes', 'outback', 'madero', 'paris 6', 'coco bambu',
     'giraffas', 'spoleto', 'china in box', 'dominos', 'pizza hut',
-    // Bakeries & cafes
     'padaria', 'panificadora', 'confeitaria', 'café', 'coffee', 'cafeteria', 'doceria',
-    // Markets & supermarkets
     'mercado', 'supermercado', 'carrefour', 'extra', 'pão de açúcar', 'pao de acucar',
     'assai', 'atacadão', 'atacadao', 'hortifruti', 'hortifrutti', 'verdureiro',
     'açougue', 'acougue', 'peixaria', 'emporio', 'empório', 'quitanda',
     'dia supermercados', 'big', 'fort atacadista', 'sam\'s club', 'makro',
     'natural da terra', 'mundo verde', 'casa de carnes', 'minuto pao de acucar',
-    // Others
     'alimentacao', 'alimentação', 'refeicao', 'refeição', 'lanche', 'almoço', 'almoco',
     'jantar', 'janta', 'snacks', 'doces', 'sorvete', 'sorveteria', 'gelateria'
   ],
   'Transporte': [
-    // Ride apps
     'uber', '99', '99app', 'taxi', 'táxi', 'cabify', 'indriver', '99 pop', '99 comfort',
     'uber x', 'uber black', 'uber comfort', 'lyft', 'blablacar',
-    // Fuel & gas stations
     'combustivel', 'combustível', 'gasolina', 'etanol', 'alcool', 'álcool', 'diesel',
     'posto', 'ipiranga', 'shell', 'petrobras', 'br distribuidora', 'ale', 'rede',
     'petrobrás', 'posto de gasolina', 'abastecimento',
-    // Parking & tolls
     'estacionamento', 'parking', 'park', 'estapar', 'zona azul', 'rotativo',
     'sem parar', 'conectcar', 'veloe', 'move mais', 'c6 tag', 'tag',
     'pedagio', 'pedágio', 'autoban', 'ccr', 'ecorodovias', 'arteris',
-    // Public transport
     'metro', 'metrô', 'ônibus', 'onibus', 'trem', 'brt', 'vlt', 'cptm', 'sptrans',
     'passagem', 'bilhete unico', 'bilhete único', 'riocard', 'bom',
-    // Vehicle maintenance
     'oficina', 'mecânico', 'mecanico', 'borracharia', 'troca de oleo', 'troca de óleo',
     'lavagem', 'lava rapido', 'lava rápido', 'lava jato', 'funilaria', 'auto center',
     'auto peças', 'auto pecas', 'pneu', 'pneus', 'alignment', 'balanceamento'
   ],
   'Moradia': [
-    // Rent & condo
     'aluguel', 'condominio', 'condomínio', 'taxa condominio', 'fundo reserva',
     'iptu', 'itbi', 'escritura', 'cartorio', 'cartório', 'imobiliaria', 'imobiliária',
-    // Utilities - Electricity
     'luz', 'energia', 'eletricidade', 'enel', 'cemig', 'copel', 'celesc', 'cpfl',
     'light', 'eletropaulo', 'coelba', 'celpe', 'energisa', 'elektro', 'equatorial',
-    // Utilities - Water
     'agua', 'água', 'sabesp', 'copasa', 'sanepar', 'cedae', 'embasa', 'compesa',
     'saneago', 'casan', 'corsan', 'dae', 'dmae', 'samae',
-    // Utilities - Gas
     'gás', 'gas', 'comgas', 'gas natural', 'ultragaz', 'supergasbras', 'copagaz',
     'nacional gas', 'liquigas', 'ceg', 'sulgás',
-    // Internet & TV
     'internet', 'fibra', 'net', 'vivo fibra', 'claro net', 'claro tv', 'oi fibra',
     'tim live', 'sky', 'directv', 'algar', 'brisanet', 'desktop', 'copel telecom',
-    // Home services
     'seguro residencial', 'seguro casa', 'alarme', 'monitoramento', 'adt',
     'diarista', 'faxineira', 'empregada', 'jardineiro', 'porteiro'
   ],
@@ -81,103 +65,79 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
     'pre pago', 'pré pago', 'pos pago', 'pós pago', 'algar telecom', 'sercomtel'
   ],
   'Lazer': [
-    // Streaming services
     'netflix', 'spotify', 'amazon prime', 'prime video', 'disney', 'disney+',
     'hbo', 'hbo max', 'max', 'globoplay', 'deezer', 'apple music', 'youtube premium',
     'youtube music', 'paramount+', 'paramount plus', 'star+', 'star plus', 'crunchyroll',
     'twitch', 'apple tv', 'tidal', 'amazon music',
-    // Entertainment venues
     'cinema', 'ingresso', 'ingresso.com', 'sympla', 'eventim', 'teatro', 'show',
     'evento', 'parque', 'parque de diversões', 'zoologico', 'zoológico', 'aquario',
     'museu', 'exposição', 'exposicao', 'circo', 'festival', 'boate', 'balada',
     'bar', 'pub', 'happy hour', 'karaoke',
-    // Games
     'xbox', 'playstation', 'psn', 'steam', 'games', 'jogos', 'nintendo', 'epic games',
     'riot games', 'blizzard', 'ea sports', 'ubisoft', 'game pass', 'ps plus',
-    // Sports & fitness
     'academia', 'smart fit', 'smartfit', 'bodytech', 'bluefit', 'selfit',
     'crossfit', 'pilates', 'yoga', 'natação', 'natacao', 'esporte', 'futebol',
     'quadra', 'clube', 'sócio torcedor', 'socio torcedor',
-    // Travel & leisure
     'hotel', 'pousada', 'airbnb', 'booking', 'trivago', 'decolar', 'submarino viagens',
     'cvc', 'hurb', 'hoteis.com', 'expedia'
   ],
   'Saúde': [
-    // Pharmacies
     'farmacia', 'farmácia', 'drogaria', 'droga raia', 'drogaraia', 'drogasil',
     'pacheco', 'pague menos', 'sao paulo', 'são paulo', 'panvel', 'nissei',
     'venancio', 'araujo', 'araújo', 'extrafarma', 'onofre', 'ultrafarma',
-    // Medical services
     'hospital', 'clinica', 'clínica', 'medico', 'médico', 'consulta',
     'dentista', 'odonto', 'odontologia', 'ortodontia', 'implante',
     'laboratorio', 'laboratório', 'exame', 'ultrassom', 'raio x', 'radiologia',
     'tomografia', 'ressonância', 'endoscopia', 'hemograma', 'checkup',
-    // Health insurance
     'plano de saude', 'plano de saúde', 'unimed', 'bradesco saude', 'bradesco saúde',
     'amil', 'sulamerica', 'sul america', 'sul américa', 'hapvida', 'notre dame',
     'intermédica', 'intermedica', 'prevent senior', 'golden cross', 'assim saude',
     'camed', 'cassi', 'postal saude', 'geap',
-    // Optical & others
     'otica', 'óptica', 'oticas carol', 'chilli beans', 'lentes de contato',
     'oculos', 'óculos', 'lente', 'audiologia', 'fonoaudiologia', 'psicologia',
     'psiquiatria', 'fisioterapia', 'nutricao', 'nutrição', 'nutricionista',
     'dermatologia', 'ortopedia', 'cardiologia', 'ginecologia', 'urologia'
   ],
   'Educação': [
-    // Schools & universities
     'escola', 'colegio', 'colégio', 'faculdade', 'universidade', 'uni',
     'mensalidade escolar', 'matricula', 'matrícula', 'educação', 'educacao',
     'ensino', 'creche', 'maternal', 'infantil', 'fundamental', 'medio', 'médio',
-    // Online courses
     'curso', 'cursos', 'udemy', 'alura', 'coursera', 'udacity', 'duolingo',
     'babbel', 'domestika', 'skillshare', 'linkedin learning', 'rocketseat',
     'origamid', 'platzi', 'hotmart', 'eduzz', 'kiwify',
-    // Books & materials
     'livro', 'livros', 'livraria', 'saraiva', 'cultura', 'travessa', 'leitura',
     'apostila', 'material escolar', 'papelaria', 'kalunga', 'caderno', 'mochila',
-    // Languages
     'ingles', 'inglês', 'espanhol', 'francês', 'frances', 'alemao', 'alemão',
     'italiano', 'wizard', 'ccaa', 'fisk', 'cultura inglesa', 'yazigi', 'uptime',
     'wise up', 'cel lep', 'cna', 'open english', 'cambridge', 'toefl', 'ielts',
-    // Test prep
     'enem', 'vestibular', 'concurso', 'preparatório', 'preparatorio', 'cursinho',
     'objetivo', 'anglo', 'etapa', 'poliedro', 'bernoulli', 'descomplica',
     'estrategia concursos', 'estratégia concursos', 'gran cursos'
   ],
   'Compras': [
-    // Marketplaces
     'amazon', 'mercado livre', 'mercadolivre', 'magalu', 'magazine luiza',
     'americanas', 'shopee', 'aliexpress', 'shein', 'wish', 'temu',
-    // Fashion
     'renner', 'riachuelo', 'c&a', 'cea', 'zara', 'h&m', 'forever 21',
     'marisa', 'pernambucanas', 'hering', 'youcom', 'arezzo', 'schutz',
     'farm', 'animale', 'le lis blanc', 'shoulder', 'osklen', 'ellus',
-    // Sports
     'centauro', 'netshoes', 'decathlon', 'nike', 'adidas', 'puma',
     'mizuno', 'under armour', 'loja esporte', 'artigos esportivos',
-    // Electronics
     'casas bahia', 'ponto frio', 'fast shop', 'fnac', 'kabum', 'pichau',
     'terabyte', 'dell', 'apple store', 'samsung store', 'xiaomi store',
     'multilaser', 'positivo', 'eletronica', 'eletrônicos',
-    // Department stores
     'tok stok', 'etna', 'mobly', 'mmartan', 'camicado', 'dpaschoal', 'polishop',
     'le biscuit', 'lojas mel', 'ri happy', 'pbkids', 'lego store',
-    // Beauty
     'o boticario', 'boticário', 'natura', 'avon', 'eudora', 'sephora',
     'mac cosmetics', 'quem disse berenice', 'beleza na web', 'epocacosmeticos',
     'época cosméticos', 'the body shop', 'loccitane', 'mary kay'
   ],
   'Utilidades': [
-    // Bank fees
     'tarifa', 'taxa bancaria', 'taxa bancária', 'anuidade', 'iof',
     'ted', 'doc', 'transferencia', 'transferência', 'saque', 'cpmf',
-    // Subscriptions & services
     'assinatura', 'mensalidade', 'renovacao', 'renovação', 'plano mensal',
     'servico', 'serviço', 'manutencao', 'manutenção', 'reparo', 'conserto',
-    // Insurance
     'seguro', 'porto seguro', 'bradesco seguros', 'itau seguros', 'azul seguros',
     'liberty', 'tokio marine', 'allianz', 'mapfre', 'suhai', 'hdi seguros',
-    // Others
     'correios', 'sedex', 'pac', 'envio', 'frete', 'entrega', 'loggi',
     'jadlog', 'total express', 'lalamove', 'uber flash'
   ],
@@ -195,18 +155,14 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
     'consultoria', 'projeto', 'trabalho', 'contrato', 'honorarios', 'honorários'
   ],
   'Investimentos': [
-    // Fixed income
     'rendimento', 'rentabilidade', 'cdb', 'lci', 'lca', 'lc', 'debênture', 'debenture',
     'tesouro direto', 'tesouro selic', 'tesouro ipca', 'tesouro prefixado',
     'poupanca', 'poupança', 'rdb', 'cri', 'cra',
-    // Variable income
     'dividendo', 'dividendos', 'jcp', 'jscp', 'juros sobre capital',
     'fii', 'fiis', 'fundo imobiliario', 'fundo imobiliário',
     'ação', 'acao', 'acoes', 'ações', 'etf', 'bdr', 'opcoes', 'opções',
-    // Crypto
     'cripto', 'criptomoeda', 'bitcoin', 'btc', 'ethereum', 'eth', 'binance',
     'mercado bitcoin', 'foxbit', 'novadax', 'bitso',
-    // Brokers & funds
     'corretora', 'xp', 'rico', 'clear', 'btg', 'inter invest', 'modal',
     'fundo de investimento', 'previdência', 'previdencia', 'pgbl', 'vgbl'
   ],
@@ -241,7 +197,7 @@ async function getPluggyApiKey(): Promise<string> {
   if (!response.ok) {
     const error = await response.text();
     console.error('[CronSync] Pluggy auth error:', error);
-    throw new Error(`Pluggy auth failed: ${error}`);
+    throw new Error('Pluggy authentication failed');
   }
 
   const data = await response.json();
@@ -250,7 +206,7 @@ async function getPluggyApiKey(): Promise<string> {
 }
 
 async function getTransactions(apiKey: string, accountId: string, from: string, to: string) {
-  console.log(`[CronSync] Fetching transactions for account ${accountId}...`);
+  console.log(`[CronSync] Fetching transactions for account...`);
   const url = `${PLUGGY_API_URL}/transactions?accountId=${accountId}&pageSize=500&from=${from}&to=${to}`;
 
   const response = await fetch(url, {
@@ -260,7 +216,7 @@ async function getTransactions(apiKey: string, accountId: string, from: string, 
   if (!response.ok) {
     const error = await response.text();
     console.error('[CronSync] Get transactions error:', error);
-    throw new Error(`Get transactions failed: ${error}`);
+    throw new Error('Failed to fetch transactions from Pluggy');
   }
 
   return response.json();
@@ -274,7 +230,7 @@ async function syncTransactionsForUser(
   from: string,
   to: string
 ) {
-  console.log(`[CronSync] Syncing transactions for user ${userId}, account ${pluggyAccount.pluggy_account_id}`);
+  console.log(`[CronSync] Syncing transactions for user ${userId}`);
 
   // Get user categories
   let { data: userCategories } = await supabase
@@ -427,6 +383,48 @@ async function syncTransactionsForUser(
   };
 }
 
+// Validate if request is from admin or internal cron
+async function validateRequest(req: Request, supabase: any): Promise<{ isValid: boolean; isAdmin: boolean; userId?: string }> {
+  const authHeader = req.headers.get('Authorization');
+  
+  // No auth header = internal cron job
+  if (!authHeader) {
+    console.log('[CronSync] Internal cron request (no auth header)');
+    return { isValid: true, isAdmin: false };
+  }
+  
+  // Has auth header = manual trigger, must verify admin role
+  const token = authHeader.replace('Bearer ', '');
+  
+  try {
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      console.error('[CronSync] Invalid token:', authError?.message);
+      return { isValid: false, isAdmin: false };
+    }
+    
+    // Check admin role
+    const { data: role } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('role', 'admin')
+      .maybeSingle();
+    
+    if (!role) {
+      console.log(`[CronSync] Non-admin user ${user.id} attempted manual sync`);
+      return { isValid: false, isAdmin: false, userId: user.id };
+    }
+    
+    console.log(`[CronSync] Manual sync triggered by admin: ${user.id}`);
+    return { isValid: true, isAdmin: true, userId: user.id };
+  } catch (error) {
+    console.error('[CronSync] Error validating request:', error);
+    return { isValid: false, isAdmin: false };
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -437,6 +435,19 @@ serve(async (req) => {
 
   try {
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
+    
+    // Validate request - must be internal cron or admin
+    const validation = await validateRequest(req, supabase);
+    
+    if (!validation.isValid) {
+      return new Response(
+        JSON.stringify({ error: 'Admin access required' }),
+        { 
+          status: 403, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
     
     // Get all active bank connections
     const { data: connections, error: connError } = await supabase
@@ -508,7 +519,7 @@ serve(async (req) => {
 
         processedConnections++;
       } catch (error) {
-        console.error(`[CronSync] Error syncing connection ${connection.id}:`, error);
+        console.error(`[CronSync] Error syncing connection:`, error);
         failedConnections++;
       }
     }
@@ -529,8 +540,7 @@ serve(async (req) => {
     });
   } catch (error) {
     console.error('[CronSync] Error in sync function:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

@@ -13,6 +13,39 @@ const PLUGGY_CLIENT_SECRET = Deno.env.get('PLUGGY_CLIENT_SECRET');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
+// Valid actions for the pluggy function
+const VALID_ACTIONS = [
+  'create_connect_token',
+  'save_connection',
+  'sync_transactions',
+  'delete_connection',
+  'get_connections'
+] as const;
+
+type ValidAction = typeof VALID_ACTIONS[number];
+
+// Input validation helpers
+function isValidAction(action: unknown): action is ValidAction {
+  return typeof action === 'string' && VALID_ACTIONS.includes(action as ValidAction);
+}
+
+function isValidUUID(value: unknown): boolean {
+  if (typeof value !== 'string') return false;
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(value);
+}
+
+function isValidDateString(value: unknown): boolean {
+  if (typeof value !== 'string') return false;
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  return dateRegex.test(value);
+}
+
+function sanitizeForLog(value: unknown): string {
+  if (typeof value !== 'string') return 'invalid';
+  return value.replace(/[^a-z_]/gi, '').substring(0, 50);
+}
+
 interface PluggyAuthResponse {
   apiKey: string;
 }
@@ -24,62 +57,46 @@ interface PluggyConnectToken {
 // Category mapping based on transaction description keywords (expanded)
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
   'Alimentação': [
-    // Delivery apps
     'ifood', 'uber eats', 'rappi', 'zé delivery', 'ze delivery', 'aiqfome', 'james delivery',
-    // Restaurants & fast food
     'restaurante', 'lanchonete', 'pizzaria', 'churrascaria', 'rodizio', 'buffet',
     'mcdonalds', 'burger king', 'subway', 'starbucks', 'habib', 'habibs', 'sushi',
     'bobs', 'kfc', 'popeyes', 'outback', 'madero', 'paris 6', 'coco bambu',
     'giraffas', 'spoleto', 'china in box', 'dominos', 'pizza hut',
-    // Bakeries & cafes
     'padaria', 'panificadora', 'confeitaria', 'café', 'coffee', 'cafeteria', 'doceria',
-    // Markets & supermarkets
     'mercado', 'supermercado', 'carrefour', 'extra', 'pão de açúcar', 'pao de acucar',
     'assai', 'atacadão', 'atacadao', 'hortifruti', 'hortifrutti', 'verdureiro',
     'açougue', 'acougue', 'peixaria', 'emporio', 'empório', 'quitanda',
     'dia supermercados', 'big', 'fort atacadista', 'sam\'s club', 'makro',
     'natural da terra', 'mundo verde', 'casa de carnes', 'minuto pao de acucar',
-    // Others
     'alimentacao', 'alimentação', 'refeicao', 'refeição', 'lanche', 'almoço', 'almoco',
     'jantar', 'janta', 'snacks', 'doces', 'sorvete', 'sorveteria', 'gelateria'
   ],
   'Transporte': [
-    // Ride apps
     'uber', '99', '99app', 'taxi', 'táxi', 'cabify', 'indriver', '99 pop', '99 comfort',
     'uber x', 'uber black', 'uber comfort', 'lyft', 'blablacar',
-    // Fuel & gas stations
     'combustivel', 'combustível', 'gasolina', 'etanol', 'alcool', 'álcool', 'diesel',
     'posto', 'ipiranga', 'shell', 'petrobras', 'br distribuidora', 'ale', 'rede',
     'petrobrás', 'posto de gasolina', 'abastecimento',
-    // Parking & tolls
     'estacionamento', 'parking', 'park', 'estapar', 'zona azul', 'rotativo',
     'sem parar', 'conectcar', 'veloe', 'move mais', 'c6 tag', 'tag',
     'pedagio', 'pedágio', 'autoban', 'ccr', 'ecorodovias', 'arteris',
-    // Public transport
     'metro', 'metrô', 'ônibus', 'onibus', 'trem', 'brt', 'vlt', 'cptm', 'sptrans',
     'passagem', 'bilhete unico', 'bilhete único', 'riocard', 'bom',
-    // Vehicle maintenance
     'oficina', 'mecânico', 'mecanico', 'borracharia', 'troca de oleo', 'troca de óleo',
     'lavagem', 'lava rapido', 'lava rápido', 'lava jato', 'funilaria', 'auto center',
     'auto peças', 'auto pecas', 'pneu', 'pneus', 'alignment', 'balanceamento'
   ],
   'Moradia': [
-    // Rent & condo
     'aluguel', 'condominio', 'condomínio', 'taxa condominio', 'fundo reserva',
     'iptu', 'itbi', 'escritura', 'cartorio', 'cartório', 'imobiliaria', 'imobiliária',
-    // Utilities - Electricity
     'luz', 'energia', 'eletricidade', 'enel', 'cemig', 'copel', 'celesc', 'cpfl',
     'light', 'eletropaulo', 'coelba', 'celpe', 'energisa', 'elektro', 'equatorial',
-    // Utilities - Water
     'agua', 'água', 'sabesp', 'copasa', 'sanepar', 'cedae', 'embasa', 'compesa',
     'saneago', 'casan', 'corsan', 'dae', 'dmae', 'samae',
-    // Utilities - Gas
     'gás', 'gas', 'comgas', 'gas natural', 'ultragaz', 'supergasbras', 'copagaz',
     'nacional gas', 'liquigas', 'ceg', 'sulgás',
-    // Internet & TV
     'internet', 'fibra', 'net', 'vivo fibra', 'claro net', 'claro tv', 'oi fibra',
     'tim live', 'sky', 'directv', 'algar', 'brisanet', 'desktop', 'copel telecom',
-    // Home services
     'seguro residencial', 'seguro casa', 'alarme', 'monitoramento', 'adt',
     'diarista', 'faxineira', 'empregada', 'jardineiro', 'porteiro'
   ],
@@ -89,103 +106,79 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
     'pre pago', 'pré pago', 'pos pago', 'pós pago', 'algar telecom', 'sercomtel'
   ],
   'Lazer': [
-    // Streaming services
     'netflix', 'spotify', 'amazon prime', 'prime video', 'disney', 'disney+',
     'hbo', 'hbo max', 'max', 'globoplay', 'deezer', 'apple music', 'youtube premium',
     'youtube music', 'paramount+', 'paramount plus', 'star+', 'star plus', 'crunchyroll',
     'twitch', 'apple tv', 'tidal', 'amazon music',
-    // Entertainment venues
     'cinema', 'ingresso', 'ingresso.com', 'sympla', 'eventim', 'teatro', 'show',
     'evento', 'parque', 'parque de diversões', 'zoologico', 'zoológico', 'aquario',
     'museu', 'exposição', 'exposicao', 'circo', 'festival', 'boate', 'balada',
     'bar', 'pub', 'happy hour', 'karaoke',
-    // Games
     'xbox', 'playstation', 'psn', 'steam', 'games', 'jogos', 'nintendo', 'epic games',
     'riot games', 'blizzard', 'ea sports', 'ubisoft', 'game pass', 'ps plus',
-    // Sports & fitness
     'academia', 'smart fit', 'smartfit', 'bodytech', 'bluefit', 'selfit',
     'crossfit', 'pilates', 'yoga', 'natação', 'natacao', 'esporte', 'futebol',
     'quadra', 'clube', 'sócio torcedor', 'socio torcedor',
-    // Travel & leisure
     'hotel', 'pousada', 'airbnb', 'booking', 'trivago', 'decolar', 'submarino viagens',
     'cvc', 'hurb', 'hoteis.com', 'expedia'
   ],
   'Saúde': [
-    // Pharmacies
     'farmacia', 'farmácia', 'drogaria', 'droga raia', 'drogaraia', 'drogasil',
     'pacheco', 'pague menos', 'sao paulo', 'são paulo', 'panvel', 'nissei',
     'venancio', 'araujo', 'araújo', 'extrafarma', 'onofre', 'ultrafarma',
-    // Medical services
     'hospital', 'clinica', 'clínica', 'medico', 'médico', 'consulta',
     'dentista', 'odonto', 'odontologia', 'ortodontia', 'implante',
     'laboratorio', 'laboratório', 'exame', 'ultrassom', 'raio x', 'radiologia',
     'tomografia', 'ressonância', 'endoscopia', 'hemograma', 'checkup',
-    // Health insurance
     'plano de saude', 'plano de saúde', 'unimed', 'bradesco saude', 'bradesco saúde',
     'amil', 'sulamerica', 'sul america', 'sul américa', 'hapvida', 'notre dame',
     'intermédica', 'intermedica', 'prevent senior', 'golden cross', 'assim saude',
     'camed', 'cassi', 'postal saude', 'geap',
-    // Optical & others
     'otica', 'óptica', 'oticas carol', 'chilli beans', 'lentes de contato',
     'oculos', 'óculos', 'lente', 'audiologia', 'fonoaudiologia', 'psicologia',
     'psiquiatria', 'fisioterapia', 'nutricao', 'nutrição', 'nutricionista',
     'dermatologia', 'ortopedia', 'cardiologia', 'ginecologia', 'urologia'
   ],
   'Educação': [
-    // Schools & universities
     'escola', 'colegio', 'colégio', 'faculdade', 'universidade', 'uni',
     'mensalidade escolar', 'matricula', 'matrícula', 'educação', 'educacao',
     'ensino', 'creche', 'maternal', 'infantil', 'fundamental', 'medio', 'médio',
-    // Online courses
     'curso', 'cursos', 'udemy', 'alura', 'coursera', 'udacity', 'duolingo',
     'babbel', 'domestika', 'skillshare', 'linkedin learning', 'rocketseat',
     'origamid', 'platzi', 'hotmart', 'eduzz', 'kiwify',
-    // Books & materials
     'livro', 'livros', 'livraria', 'saraiva', 'cultura', 'travessa', 'leitura',
     'apostila', 'material escolar', 'papelaria', 'kalunga', 'caderno', 'mochila',
-    // Languages
     'ingles', 'inglês', 'espanhol', 'francês', 'frances', 'alemao', 'alemão',
     'italiano', 'wizard', 'ccaa', 'fisk', 'cultura inglesa', 'yazigi', 'uptime',
     'wise up', 'cel lep', 'cna', 'open english', 'cambridge', 'toefl', 'ielts',
-    // Test prep
     'enem', 'vestibular', 'concurso', 'preparatório', 'preparatorio', 'cursinho',
     'objetivo', 'anglo', 'etapa', 'poliedro', 'bernoulli', 'descomplica',
     'estrategia concursos', 'estratégia concursos', 'gran cursos'
   ],
   'Compras': [
-    // Marketplaces
     'amazon', 'mercado livre', 'mercadolivre', 'magalu', 'magazine luiza',
     'americanas', 'shopee', 'aliexpress', 'shein', 'wish', 'temu',
-    // Fashion
     'renner', 'riachuelo', 'c&a', 'cea', 'zara', 'h&m', 'forever 21',
     'marisa', 'pernambucanas', 'hering', 'youcom', 'arezzo', 'schutz',
     'farm', 'animale', 'le lis blanc', 'shoulder', 'osklen', 'ellus',
-    // Sports
     'centauro', 'netshoes', 'decathlon', 'nike', 'adidas', 'puma',
     'mizuno', 'under armour', 'loja esporte', 'artigos esportivos',
-    // Electronics
     'casas bahia', 'ponto frio', 'fast shop', 'fnac', 'kabum', 'pichau',
     'terabyte', 'dell', 'apple store', 'samsung store', 'xiaomi store',
     'multilaser', 'positivo', 'eletronica', 'eletrônicos',
-    // Department stores
     'tok stok', 'etna', 'mobly', 'mmartan', 'camicado', 'dpaschoal', 'polishop',
     'le biscuit', 'lojas mel', 'ri happy', 'pbkids', 'lego store',
-    // Beauty
     'o boticario', 'boticário', 'natura', 'avon', 'eudora', 'sephora',
     'mac cosmetics', 'quem disse berenice', 'beleza na web', 'epocacosmeticos',
     'época cosméticos', 'the body shop', 'loccitane', 'mary kay'
   ],
   'Utilidades': [
-    // Bank fees
     'tarifa', 'taxa bancaria', 'taxa bancária', 'anuidade', 'iof',
     'ted', 'doc', 'transferencia', 'transferência', 'saque', 'cpmf',
-    // Subscriptions & services
     'assinatura', 'mensalidade', 'renovacao', 'renovação', 'plano mensal',
     'servico', 'serviço', 'manutencao', 'manutenção', 'reparo', 'conserto',
-    // Insurance
     'seguro', 'porto seguro', 'bradesco seguros', 'itau seguros', 'azul seguros',
     'liberty', 'tokio marine', 'allianz', 'mapfre', 'suhai', 'hdi seguros',
-    // Others
     'correios', 'sedex', 'pac', 'envio', 'frete', 'entrega', 'loggi',
     'jadlog', 'total express', 'lalamove', 'uber flash'
   ],
@@ -203,18 +196,14 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
     'consultoria', 'projeto', 'trabalho', 'contrato', 'honorarios', 'honorários'
   ],
   'Investimentos': [
-    // Fixed income
     'rendimento', 'rentabilidade', 'cdb', 'lci', 'lca', 'lc', 'debênture', 'debenture',
     'tesouro direto', 'tesouro selic', 'tesouro ipca', 'tesouro prefixado',
     'poupanca', 'poupança', 'rdb', 'cri', 'cra',
-    // Variable income
     'dividendo', 'dividendos', 'jcp', 'jscp', 'juros sobre capital',
     'fii', 'fiis', 'fundo imobiliario', 'fundo imobiliário',
     'ação', 'acao', 'acoes', 'ações', 'etf', 'bdr', 'opcoes', 'opções',
-    // Crypto
     'cripto', 'criptomoeda', 'bitcoin', 'btc', 'ethereum', 'eth', 'binance',
     'mercado bitcoin', 'foxbit', 'novadax', 'bitso',
-    // Brokers & funds
     'corretora', 'xp', 'rico', 'clear', 'btg', 'inter invest', 'modal',
     'fundo de investimento', 'previdência', 'previdencia', 'pgbl', 'vgbl'
   ],
@@ -247,9 +236,8 @@ async function getPluggyApiKey(): Promise<string> {
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    console.error('Pluggy auth error:', error);
-    throw new Error(`Pluggy auth failed: ${error}`);
+    console.error('Pluggy auth error');
+    throw new Error('Pluggy authentication failed');
   }
 
   const data: PluggyAuthResponse = await response.json();
@@ -269,9 +257,8 @@ async function createConnectToken(apiKey: string): Promise<string> {
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    console.error('Connect token error:', error);
-    throw new Error(`Connect token failed: ${error}`);
+    console.error('Connect token error');
+    throw new Error('Failed to create connect token');
   }
 
   const data: PluggyConnectToken = await response.json();
@@ -280,37 +267,35 @@ async function createConnectToken(apiKey: string): Promise<string> {
 }
 
 async function getItem(apiKey: string, itemId: string) {
-  console.log(`Fetching item ${itemId}...`);
+  console.log(`Fetching item...`);
   const response = await fetch(`${PLUGGY_API_URL}/items/${itemId}`, {
     headers: { 'X-API-KEY': apiKey },
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    console.error('Get item error:', error);
-    throw new Error(`Get item failed: ${error}`);
+    console.error('Get item error');
+    throw new Error('Failed to get item');
   }
 
   return response.json();
 }
 
 async function getAccounts(apiKey: string, itemId: string) {
-  console.log(`Fetching accounts for item ${itemId}...`);
+  console.log(`Fetching accounts for item...`);
   const response = await fetch(`${PLUGGY_API_URL}/accounts?itemId=${itemId}`, {
     headers: { 'X-API-KEY': apiKey },
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    console.error('Get accounts error:', error);
-    throw new Error(`Get accounts failed: ${error}`);
+    console.error('Get accounts error');
+    throw new Error('Failed to get accounts');
   }
 
   return response.json();
 }
 
 async function getTransactions(apiKey: string, accountId: string, from?: string, to?: string) {
-  console.log(`Fetching transactions for account ${accountId}...`);
+  console.log(`Fetching transactions for account...`);
   let url = `${PLUGGY_API_URL}/transactions?accountId=${accountId}&pageSize=500`;
   if (from) url += `&from=${from}`;
   if (to) url += `&to=${to}`;
@@ -320,25 +305,23 @@ async function getTransactions(apiKey: string, accountId: string, from?: string,
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    console.error('Get transactions error:', error);
-    throw new Error(`Get transactions failed: ${error}`);
+    console.error('Get transactions error');
+    throw new Error('Failed to get transactions');
   }
 
   return response.json();
 }
 
 async function deleteItem(apiKey: string, itemId: string) {
-  console.log(`Deleting item ${itemId}...`);
+  console.log(`Deleting item...`);
   const response = await fetch(`${PLUGGY_API_URL}/items/${itemId}`, {
     method: 'DELETE',
     headers: { 'X-API-KEY': apiKey },
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    console.error('Delete item error:', error);
-    throw new Error(`Delete item failed: ${error}`);
+    console.error('Delete item error');
+    throw new Error('Failed to delete item');
   }
 
   return { success: true };
@@ -499,7 +482,10 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      throw new Error('No authorization header');
+      return new Response(
+        JSON.stringify({ error: 'No authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Create Supabase client for user operations
@@ -510,11 +496,43 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
     
     if (authError || !user) {
-      throw new Error('Invalid authorization token');
+      return new Response(
+        JSON.stringify({ error: 'Invalid authorization token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const userId = user.id;
-    const { action, ...params } = await req.json();
+    
+    // Parse and validate request body
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    if (typeof body !== 'object' || body === null) {
+      return new Response(
+        JSON.stringify({ error: 'Request body must be an object' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    const { action, ...params } = body as Record<string, unknown>;
+    
+    // Validate action parameter
+    if (!isValidAction(action)) {
+      console.log(`Invalid action attempted: ${sanitizeForLog(action)} by user: ${userId}`);
+      return new Response(
+        JSON.stringify({ error: 'Invalid action. Allowed actions: ' + VALID_ACTIONS.join(', ') }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     console.log(`Processing action: ${action} for user: ${userId}`);
 
     const apiKey = await getPluggyApiKey();
@@ -530,6 +548,15 @@ serve(async (req) => {
 
       case 'save_connection': {
         const { itemId } = params;
+        
+        // Validate itemId
+        if (typeof itemId !== 'string' || itemId.length === 0 || itemId.length > 100) {
+          return new Response(
+            JSON.stringify({ error: 'Invalid itemId parameter' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
         const item = await getItem(apiKey, itemId);
         
         // Save bank connection
@@ -598,7 +625,32 @@ serve(async (req) => {
       }
 
       case 'sync_transactions': {
-        const { connectionId, from, to, markForReview = true } = params;
+        const { connectionId, from, to, markForReview } = params;
+        
+        // Validate connectionId
+        if (!isValidUUID(connectionId)) {
+          return new Response(
+            JSON.stringify({ error: 'Invalid connectionId parameter' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        // Validate date parameters if provided
+        if (from !== undefined && !isValidDateString(from)) {
+          return new Response(
+            JSON.stringify({ error: 'Invalid from date format. Use YYYY-MM-DD' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        if (to !== undefined && !isValidDateString(to)) {
+          return new Response(
+            JSON.stringify({ error: 'Invalid to date format. Use YYYY-MM-DD' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        const shouldMarkForReview = markForReview !== false;
         
         // Get the bank connection
         const { data: connection, error: connError } = await supabaseClient
@@ -609,7 +661,10 @@ serve(async (req) => {
           .single();
 
         if (connError || !connection) {
-          throw new Error('Connection not found');
+          return new Response(
+            JSON.stringify({ error: 'Connection not found' }),
+            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
         }
 
         // Get pluggy accounts for this connection
@@ -629,8 +684,8 @@ serve(async (req) => {
           const transactionsResponse = await getTransactions(
             apiKey, 
             pAccount.pluggy_account_id,
-            from,
-            to
+            from as string | undefined,
+            to as string | undefined
           );
           const transactions = transactionsResponse.results || [];
 
@@ -640,7 +695,7 @@ serve(async (req) => {
             pAccount.pluggy_account_id,
             pAccount.local_account_id,
             transactions,
-            markForReview
+            shouldMarkForReview
           );
 
           totalInserted += syncResult.inserted;
@@ -687,6 +742,14 @@ serve(async (req) => {
 
       case 'delete_connection': {
         const { connectionId } = params;
+        
+        // Validate connectionId
+        if (!isValidUUID(connectionId)) {
+          return new Response(
+            JSON.stringify({ error: 'Invalid connectionId parameter' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
         
         // Get connection to find itemId
         const { data: connection } = await supabaseClient
@@ -736,7 +799,11 @@ serve(async (req) => {
       }
 
       default:
-        throw new Error(`Unknown action: ${action}`);
+        // This should never happen due to isValidAction check above
+        return new Response(
+          JSON.stringify({ error: 'Invalid action' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
     }
 
     return new Response(JSON.stringify(result), {
@@ -744,8 +811,7 @@ serve(async (req) => {
     });
   } catch (error) {
     console.error('Error in pluggy function:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
