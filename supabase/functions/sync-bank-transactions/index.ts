@@ -397,32 +397,13 @@ function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean {
 async function validateCronRequest(req: Request): Promise<boolean> {
   const cronSecret = Deno.env.get('CRON_SECRET');
   
-  // If no CRON_SECRET is set, fall back to checking for internal request pattern
+  // SECURITY: CRON_SECRET is required for cron job authentication
   if (!cronSecret) {
-    // Check if request comes from Supabase internal (no external origin)
-    const origin = req.headers.get('origin');
-    const referer = req.headers.get('referer');
-    const authHeader = req.headers.get('Authorization');
-    
-    // SECURITY: If there's an Authorization header, this is NOT an internal cron request
-    // Internal cron requests from pg_cron/pg_net don't have Authorization headers
-    if (authHeader) {
-      console.log('[CronSync] Request has auth header - not a cron request');
-      return false;
-    }
-    
-    // Internal cron calls typically have no origin/referer
-    // and come through Supabase's internal network
-    if (!origin && !referer) {
-      console.log('[CronSync] Internal request detected (no origin/referer/auth)');
-      return true;
-    }
-    
-    console.error('[CronSync] External request blocked - CRON_SECRET not configured');
+    console.error('[CronSync] CRON_SECRET not configured - rejecting request. Please configure CRON_SECRET in Edge Function secrets.');
     return false;
   }
   
-  // If CRON_SECRET is set, validate HMAC signature
+  // Validate HMAC signature
   const signature = req.headers.get('x-cron-signature');
   const timestamp = req.headers.get('x-cron-timestamp');
   
