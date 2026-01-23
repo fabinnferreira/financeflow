@@ -383,17 +383,106 @@ async function syncTransactionsForUser(
   };
 }
 
-// Validate if request is from admin or internal cron
-async function validateRequest(req: Request, supabase: any): Promise<{ isValid: boolean; isAdmin: boolean; userId?: string }> {
-  const authHeader = req.headers.get('Authorization');
+// Timing-safe comparison to prevent timing attacks
+function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean {
+  if (a.length !== b.length) return false;
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a[i] ^ b[i];
+  }
+  return result === 0;
+}
+
+// Validate internal cron request using HMAC
+async function validateCronRequest(req: Request): Promise<boolean> {
+  const cronSecret = Deno.env.get('CRON_SECRET');
   
-  // No auth header = internal cron job
-  if (!authHeader) {
-    console.log('[CronSync] Internal cron request (no auth header)');
-    return { isValid: true, isAdmin: false };
+  // If no CRON_SECRET is set, fall back to checking for internal request pattern
+  if (!cronSecret) {
+    // Check if request comes from Supabase internal (no external origin)
+    const origin = req.headers.get('origin');
+    const referer = req.headers.get('referer');
+    const authHeader = req.headers.get('Authorization');
+    
+    // SECURITY: If there's an Authorization header, this is NOT an internal cron request
+    // Internal cron requests from pg_cron/pg_net don't have Authorization headers
+    if (authHeader) {
+      console.log('[CronSync] Request has auth header - not a cron request');
+      return false;
+    }
+    
+    // Internal cron calls typically have no origin/referer
+    // and come through Supabase's internal network
+    if (!origin && !referer) {
+      console.log('[CronSync] Internal request detected (no origin/referer/auth)');
+      return true;
+    }
+    
+    console.error('[CronSync] External request blocked - CRON_SECRET not configured');
+    return false;
   }
   
-  // Has auth header = manual trigger, must verify admin role
+  // If CRON_SECRET is set, validate HMAC signature
+  const signature = req.headers.get('x-cron-signature');
+  const timestamp = req.headers.get('x-cron-timestamp');
+  
+  if (!signature || !timestamp) {
+    console.error('[CronSync] Missing signature or timestamp headers');
+    return false;
+  }
+  
+  // Verify timestamp to prevent replay attacks (within 5 minutes)
+  const requestTime = parseInt(timestamp);
+  if (isNaN(requestTime) || Math.abs(Date.now() - requestTime) > 300000) {
+    console.error('[CronSync] Request timestamp expired or invalid');
+    return false;
+  }
+  
+  // Verify HMAC signature
+  try {
+    const payload = `${timestamp}.sync-bank-transactions`;
+    const key = await crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(cronSecret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
+    
+    const expectedSigBytes = new Uint8Array(
+      await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload))
+    );
+    
+    // Decode the provided signature (base64)
+    let providedSigBytes: Uint8Array;
+    try {
+      providedSigBytes = Uint8Array.from(atob(signature), c => c.charCodeAt(0));
+    } catch {
+      console.error('[CronSync] Invalid signature format');
+      return false;
+    }
+    
+    if (!timingSafeEqual(expectedSigBytes, providedSigBytes)) {
+      console.error('[CronSync] Invalid HMAC signature');
+      return false;
+    }
+    
+    console.log('[CronSync] Valid HMAC signature verified');
+    return true;
+  } catch (error) {
+    console.error('[CronSync] Error verifying signature:', error);
+    return false;
+  }
+}
+
+// Validate if request is from admin (manual trigger)
+async function validateAdminRequest(req: Request, supabase: any): Promise<{ isValid: boolean; isAdmin: boolean; userId?: string }> {
+  const authHeader = req.headers.get('Authorization');
+  
+  if (!authHeader) {
+    return { isValid: false, isAdmin: false };
+  }
+  
   const token = authHeader.replace('Bearer ', '');
   
   try {
@@ -436,17 +525,30 @@ serve(async (req) => {
   try {
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
     
-    // Validate request - must be internal cron or admin
-    const validation = await validateRequest(req, supabase);
+    // First check if this is a valid cron request (HMAC or internal)
+    const isValidCron = await validateCronRequest(req);
     
-    if (!validation.isValid) {
-      return new Response(
-        JSON.stringify({ error: 'Admin access required' }),
-        { 
-          status: 403, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
+    // If not a valid cron request, check for admin authentication
+    let isAdmin = false;
+    let adminUserId: string | undefined;
+    
+    if (!isValidCron) {
+      const adminValidation = await validateAdminRequest(req, supabase);
+      if (!adminValidation.isValid) {
+        console.error('[CronSync] Unauthorized access attempt');
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized - Admin access or valid cron signature required' }),
+          { 
+            status: 403, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
+      isAdmin = adminValidation.isAdmin;
+      adminUserId = adminValidation.userId;
+      console.log(`[CronSync] Admin ${adminUserId} triggered manual sync`);
+    } else {
+      console.log('[CronSync] Valid cron request verified');
     }
     
     // Get all active bank connections
