@@ -1,12 +1,11 @@
-import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Target, ArrowRight } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { formatCurrencyValue } from "@/lib/formatters";
+import { useGoalsWidget } from "@/hooks/useGoalsWidget";
 
 interface Goal {
   id: number;
@@ -18,41 +17,15 @@ interface Goal {
 }
 
 export const GoalsWidget = () => {
-  const [goals, setGoals] = useState<Goal[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: goals = [], isLoading } = useGoalsWidget();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    loadGoals();
-  }, []);
-
-  const loadGoals = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from("financial_goals")
-        .select("id, name, target_amount_cents, current_amount_cents, emoji, color")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(3);
-
-      if (error) throw error;
-      setGoals(data || []);
-    } catch (error) {
-      console.error("Error loading goals:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getProgress = (goal: Goal) => {
     if (goal.target_amount_cents === 0) return 0;
     return Math.min(100, (goal.current_amount_cents / goal.target_amount_cents) * 100);
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <Card className="shadow-lg animate-slide-up" style={{ animationDelay: "0.2s" }}>
         <CardHeader>
