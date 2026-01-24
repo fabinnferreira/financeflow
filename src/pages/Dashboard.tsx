@@ -20,6 +20,7 @@ import { PendingReviewBadge } from "@/components/PendingReviewBadge";
 import { useDashboard, PeriodFilter } from "@/hooks/useDashboard";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatCurrencyValue } from "@/lib/formatters";
+import { invalidateAfterTransaction } from "@/lib/queryClient";
 import { usePlan } from "@/hooks/usePlan";
 import { UpgradeBanner } from "@/components/UpgradeBanner";
 import { TrialBanner } from "@/components/TrialBanner";
@@ -73,9 +74,7 @@ const Dashboard = () => {
   };
 
   const handleTransactionSuccess = () => {
-    queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-    queryClient.invalidateQueries({ queryKey: ["transactions-infinite"] });
-    queryClient.invalidateQueries({ queryKey: ["accounts"] });
+    invalidateAfterTransaction(queryClient);
   };
 
   if (isLoading) {

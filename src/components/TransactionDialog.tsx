@@ -12,6 +12,9 @@ import { recalculateAccountBalance } from "@/lib/accountBalance";
 import { useQueryClient } from "@tanstack/react-query";
 import { usePlan } from "@/hooks/usePlan";
 import { UpgradeModal } from "./UpgradeModal";
+import { useAccounts } from "@/hooks/useAccounts";
+import { useCategories } from "@/hooks/useCategories";
+import { invalidateAfterTransaction } from "@/lib/queryClient";
 
 interface Account {
   id: number;
@@ -37,8 +40,6 @@ export function TransactionDialog({ open, onOpenChange, onSuccess }: Transaction
   const { canAddTransaction, incrementUsage, usage, limits } = usePlan();
   const [loading, setLoading] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [formData, setFormData] = useState({
     type: "expense",
     description: "",
@@ -48,47 +49,18 @@ export function TransactionDialog({ open, onOpenChange, onSuccess }: Transaction
     date: new Date().toISOString().split('T')[0],
   });
 
-  useEffect(() => {
-    if (open) {
-      loadAccounts();
-      loadCategories();
-    }
-  }, [open, formData.type]);
-
-  const loadAccounts = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data, error } = await supabase
-      .from("accounts")
-      .select("id, name, type")
-      .eq("user_id", user.id);
-
-    if (error) {
-      console.error("Error loading accounts:", error);
-      return;
-    }
-
-    setAccounts(data || []);
-  };
-
-  const loadCategories = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data, error } = await supabase
-      .from("categories")
-      .select("id, name, emoji, type")
-      .eq("user_id", user.id)
-      .eq("type", formData.type);
-
-    if (error) {
-      console.error("Error loading categories:", error);
-      return;
-    }
-
-    setCategories(data || []);
-  };
+  // Use cached data from React Query hooks
+  const { data: accountsData = [] } = useAccounts();
+  const { data: categoriesData = [] } = useCategories(formData.type);
+  
+  // Map to expected format
+  const accounts: Account[] = accountsData.map(a => ({ id: a.id, name: a.name, type: a.type }));
+  const categories: Category[] = categoriesData.map(c => ({ 
+    id: c.id, 
+    name: c.name, 
+    emoji: c.emoji || "", 
+    type: c.type 
+  }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -136,10 +108,8 @@ export function TransactionDialog({ open, onOpenChange, onSuccess }: Transaction
       // Increment usage count
       await incrementUsage('transactions');
 
-      // Invalidate queries
-      queryClient.invalidateQueries({ queryKey: ["transactions-infinite"] });
-      queryClient.invalidateQueries({ queryKey: ["accounts"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      // Invalidate related queries using centralized helper
+      invalidateAfterTransaction(queryClient);
 
       toast.success("Transação criada com sucesso!");
 

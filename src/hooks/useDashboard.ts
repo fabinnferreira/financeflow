@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear, subMonths } from "date-fns";
+import { queryKeys } from "@/lib/queryClient";
 
 export type PeriodFilter = "week" | "month" | "quarter" | "year" | "custom";
 
@@ -143,8 +144,14 @@ export function useDashboard(
   customEndDate?: Date
 ) {
   return useQuery({
-    queryKey: ["dashboard", periodFilter, customStartDate?.toISOString(), customEndDate?.toISOString()],
+    queryKey: queryKeys.dashboard(
+      periodFilter,
+      customStartDate?.toISOString(),
+      customEndDate?.toISOString()
+    ),
     queryFn: () => fetchDashboardData(periodFilter, customStartDate, customEndDate),
-    staleTime: 30000, // Consider data fresh for 30 seconds
+    staleTime: 2 * 60 * 1000, // Data fresh for 2 minutes
+    gcTime: 10 * 60 * 1000, // Cache for 10 minutes
+    refetchOnWindowFocus: false,
   });
 }
