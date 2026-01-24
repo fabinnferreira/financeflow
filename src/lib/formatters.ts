@@ -26,6 +26,17 @@ export const formatCurrencyValue = (value: number): string => {
 };
 
 /**
+ * Format a number (not cents) to Brazilian Real currency string without symbol
+ * Used for PDF/Excel exports where R$ is added separately
+ */
+export const formatCurrencyRaw = (value: number): string => {
+  return value.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+};
+
+/**
  * Format a date string to Brazilian locale (dd/MM/yyyy)
  */
 export const formatDate = (dateString: string): string => {

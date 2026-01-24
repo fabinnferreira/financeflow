@@ -13,7 +13,7 @@ import { startOfMonth, endOfMonth, subMonths, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import DynamicBackground from "@/components/DynamicBackground";
 import { PageHeader } from "@/components/PageHeader";
-import { formatCurrency } from "@/lib/formatters";
+import { formatCurrencyValue } from "@/lib/formatters";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -153,13 +153,6 @@ const Reports = () => {
   const avgMonthlyIncome = totalIncome / monthlyData.length || 0;
   const avgMonthlyExpense = totalExpenses / monthlyData.length || 0;
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL"
-    }).format(value);
-  };
-
   const getPeriodLabel = () => {
     switch (monthsToShow) {
       case "3": return "Últimos 3 meses";
@@ -190,14 +183,14 @@ const Reports = () => {
     
     doc.setFontSize(11);
     doc.setTextColor(16, 185, 129);
-    doc.text(`Total de Receitas: ${formatCurrency(totalIncome)}`, 14, 65);
+    doc.text(`Total de Receitas: ${formatCurrencyValue(totalIncome)}`, 14, 65);
     
     doc.setTextColor(239, 68, 68);
-    doc.text(`Total de Despesas: ${formatCurrency(totalExpenses)}`, 14, 72);
+    doc.text(`Total de Despesas: ${formatCurrencyValue(totalExpenses)}`, 14, 72);
     
     const balanceColor = totalBalance >= 0 ? [16, 185, 129] : [239, 68, 68];
     doc.setTextColor(balanceColor[0], balanceColor[1], balanceColor[2]);
-    doc.text(`Balanço: ${formatCurrency(totalBalance)}`, 14, 79);
+    doc.text(`Balanço: ${formatCurrencyValue(totalBalance)}`, 14, 79);
 
     doc.setTextColor(100);
     doc.text(`Taxa de Poupança: ${totalIncome > 0 ? Math.round((totalBalance / totalIncome) * 100) : 0}%`, 14, 86);
@@ -209,9 +202,9 @@ const Reports = () => {
 
     const monthlyTableData = monthlyData.map((m) => [
       m.month,
-      formatCurrency(m.income),
-      formatCurrency(m.expense),
-      formatCurrency(m.balance)
+      formatCurrencyValue(m.income),
+      formatCurrencyValue(m.expense),
+      formatCurrencyValue(m.balance)
     ]);
 
     autoTable(doc, {
@@ -243,7 +236,7 @@ const Reports = () => {
 
       const categoryTableData = categoryTotals.map((cat) => [
         `${cat.emoji} ${cat.name}`,
-        formatCurrency(cat.amount),
+        formatCurrencyValue(cat.amount),
         `${((cat.amount / totalExpenses) * 100).toFixed(1)}%`
       ]);
 
@@ -289,12 +282,12 @@ const Reports = () => {
       ["Gerado em", new Date().toLocaleDateString("pt-BR")],
       [""],
       ["Resumo Financeiro"],
-      ["Total de Receitas", formatCurrency(totalIncome)],
-      ["Total de Despesas", formatCurrency(totalExpenses)],
-      ["Balanço", formatCurrency(totalBalance)],
+      ["Total de Receitas", formatCurrencyValue(totalIncome)],
+      ["Total de Despesas", formatCurrencyValue(totalExpenses)],
+      ["Balanço", formatCurrencyValue(totalBalance)],
       ["Taxa de Poupança", `${totalIncome > 0 ? Math.round((totalBalance / totalIncome) * 100) : 0}%`],
-      ["Média Mensal Receitas", formatCurrency(avgMonthlyIncome)],
-      ["Média Mensal Despesas", formatCurrency(avgMonthlyExpense)],
+      ["Média Mensal Receitas", formatCurrencyValue(avgMonthlyIncome)],
+      ["Média Mensal Despesas", formatCurrencyValue(avgMonthlyExpense)],
     ];
 
     const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
@@ -452,8 +445,8 @@ const Reports = () => {
               <ArrowUpRight className="h-4 w-4 text-success" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-success">{formatCurrency(totalIncome)}</div>
-              <p className="text-xs text-muted-foreground">Média: {formatCurrency(avgMonthlyIncome)}/mês</p>
+              <div className="text-2xl font-bold text-success">{formatCurrencyValue(totalIncome)}</div>
+              <p className="text-xs text-muted-foreground">Média: {formatCurrencyValue(avgMonthlyIncome)}/mês</p>
             </CardContent>
           </Card>
 
@@ -463,8 +456,8 @@ const Reports = () => {
               <ArrowDownRight className="h-4 w-4 text-destructive" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-destructive">{formatCurrency(totalExpenses)}</div>
-              <p className="text-xs text-muted-foreground">Média: {formatCurrency(avgMonthlyExpense)}/mês</p>
+              <div className="text-2xl font-bold text-destructive">{formatCurrencyValue(totalExpenses)}</div>
+              <p className="text-xs text-muted-foreground">Média: {formatCurrencyValue(avgMonthlyExpense)}/mês</p>
             </CardContent>
           </Card>
 
@@ -475,7 +468,7 @@ const Reports = () => {
             </CardHeader>
             <CardContent>
               <div className={`text-2xl font-bold ${totalBalance >= 0 ? "text-success" : "text-destructive"}`}>
-                {formatCurrency(totalBalance)}
+                {formatCurrencyValue(totalBalance)}
               </div>
               <p className="text-xs text-muted-foreground">
                 {totalIncome > 0 ? `${Math.round((totalExpenses / totalIncome) * 100)}% gasto` : "N/A"}
@@ -486,171 +479,252 @@ const Reports = () => {
           <Card className="animate-slide-up" style={{ animationDelay: "0.3s" }}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Taxa de Poupança</CardTitle>
-              <BarChart3 className="h-4 w-4 text-primary" />
+              <TrendingUp className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-primary">
-                {totalIncome > 0 ? `${Math.round((totalBalance / totalIncome) * 100)}%` : "N/A"}
+                {totalIncome > 0 ? Math.round((totalBalance / totalIncome) * 100) : 0}%
               </div>
               <p className="text-xs text-muted-foreground">do total de receitas</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Monthly Comparison Chart */}
-        <Card className="animate-slide-up">
-          <CardHeader>
-            <CardTitle>Comparativo Mensal</CardTitle>
-            <CardDescription>Evolução de receitas e despesas ao longo do tempo</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer
-              config={{
-                income: { label: "Receitas", color: "hsl(var(--success))" },
-                expense: { label: "Despesas", color: "hsl(var(--destructive))" },
-                balance: { label: "Balanço", color: "hsl(var(--primary))" }
-              } as ChartConfig}
-              className="h-[350px]"
-            >
-              <BarChart data={monthlyData}>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                <XAxis dataKey="month" tickLine={false} tickMargin={10} axisLine={false} />
-                <YAxis tickLine={false} axisLine={false} tickFormatter={(v) => `R$${v}`} />
-                <Tooltip content={<ChartTooltipContent />} />
-                <Legend content={<ChartLegendContent />} />
-                <Bar dataKey="income" fill="var(--color-income)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="expense" fill="var(--color-expense)" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
-        {/* Balance Evolution */}
-        <Card className="animate-slide-up">
-          <CardHeader>
-            <CardTitle>Evolução do Balanço</CardTitle>
-            <CardDescription>Diferença entre receitas e despesas por mês</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer
-              config={{
-                balance: { label: "Balanço", color: "hsl(var(--primary))" }
-              } as ChartConfig}
-              className="h-[300px]"
-            >
-              <AreaChart data={monthlyData}>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                <XAxis dataKey="month" tickLine={false} tickMargin={10} axisLine={false} />
-                <YAxis tickLine={false} axisLine={false} tickFormatter={(v) => `R$${v}`} />
-                <Tooltip content={<ChartTooltipContent />} />
-                <Area
-                  type="monotone"
-                  dataKey="balance"
-                  stroke="var(--color-balance)"
-                  fill="var(--color-balance)"
-                  fillOpacity={0.3}
-                />
-              </AreaChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
-        {/* Category Distribution */}
-        <div className="grid lg:grid-cols-2 gap-8">
-          <Card className="animate-slide-up">
+        {/* Charts Section */}
+        <div className="grid lg:grid-cols-2 gap-6">
+          {/* Bar Chart - Monthly Evolution */}
+          <Card className="animate-slide-up" style={{ animationDelay: "0.4s" }}>
             <CardHeader>
-              <CardTitle>Despesas por Categoria</CardTitle>
-              <CardDescription>Distribuição dos seus gastos no período</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-primary" />
+                Evolução Mensal
+              </CardTitle>
+              <CardDescription>Comparativo de receitas e despesas</CardDescription>
             </CardHeader>
             <CardContent>
-              {categoryTotals.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  Nenhuma despesa registrada
-                </div>
-              ) : (
-                <ChartContainer
-                  config={categoryTotals.reduce((acc, item) => {
-                    acc[item.name] = { label: `${item.emoji} ${item.name}`, color: item.color };
-                    return acc;
-                  }, {} as ChartConfig)}
-                  className="h-[300px]"
-                >
-                  <PieChart>
-                    <Pie data={categoryTotals} dataKey="amount" nameKey="name" innerRadius={60}>
-                      {categoryTotals.map((item, index) => (
-                        <Cell key={`cell-${index}`} fill={item.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip content={<ChartTooltipContent hideLabel />} />
-                    <Legend content={<ChartLegendContent />} />
-                  </PieChart>
-                </ChartContainer>
-              )}
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={monthlyData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis 
+                      dataKey="month" 
+                      tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                      axisLine={{ stroke: 'hsl(var(--border))' }}
+                    />
+                    <YAxis 
+                      tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                      axisLine={{ stroke: 'hsl(var(--border))' }}
+                      tickFormatter={(value) => `R$${value}`}
+                    />
+                    <Tooltip 
+                      formatter={(value: number) => formatCurrencyValue(value)}
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                      }}
+                    />
+                    <Legend />
+                    <Bar dataKey="income" name="Receitas" fill="hsl(var(--success))" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="expense" name="Despesas" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </CardContent>
           </Card>
 
-          <Card className="animate-slide-up">
+          {/* Area Chart - Balance Evolution */}
+          <Card className="animate-slide-up" style={{ animationDelay: "0.5s" }}>
             <CardHeader>
-              <CardTitle>Receitas por Categoria</CardTitle>
-              <CardDescription>Distribuição das suas receitas no período</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-primary" />
+                Evolução do Saldo
+              </CardTitle>
+              <CardDescription>Variação do balanço ao longo do tempo</CardDescription>
             </CardHeader>
             <CardContent>
-              {incomeCategoryTotals.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  Nenhuma receita registrada
-                </div>
-              ) : (
-                <ChartContainer
-                  config={incomeCategoryTotals.reduce((acc, item) => {
-                    acc[item.name] = { label: `${item.emoji} ${item.name}`, color: item.color };
-                    return acc;
-                  }, {} as ChartConfig)}
-                  className="h-[300px]"
-                >
-                  <PieChart>
-                    <Pie data={incomeCategoryTotals} dataKey="amount" nameKey="name" innerRadius={60}>
-                      {incomeCategoryTotals.map((item, index) => (
-                        <Cell key={`cell-${index}`} fill={item.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip content={<ChartTooltipContent hideLabel />} />
-                    <Legend content={<ChartLegendContent />} />
-                  </PieChart>
-                </ChartContainer>
-              )}
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={monthlyData}>
+                    <defs>
+                      <linearGradient id="colorBalance" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis 
+                      dataKey="month" 
+                      tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                      axisLine={{ stroke: 'hsl(var(--border))' }}
+                    />
+                    <YAxis 
+                      tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                      axisLine={{ stroke: 'hsl(var(--border))' }}
+                      tickFormatter={(value) => `R$${value}`}
+                    />
+                    <Tooltip 
+                      formatter={(value: number) => formatCurrencyValue(value)}
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                      }}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="balance" 
+                      name="Balanço" 
+                      stroke="hsl(var(--primary))" 
+                      fillOpacity={1} 
+                      fill="url(#colorBalance)" 
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Top Expense Categories Table */}
-        <Card className="animate-slide-up">
+        {/* Pie Charts */}
+        <div className="grid lg:grid-cols-2 gap-6">
+          {/* Expense Categories */}
+          <PremiumOverlay 
+            isLocked={!hasAdvancedReports} 
+            message="Gráficos detalhados são um recurso Premium"
+            onUpgrade={() => setUpgradeModalOpen(true)}
+          >
+            <Card className="animate-slide-up" style={{ animationDelay: "0.6s" }}>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <PieChart className="h-5 w-5 text-destructive" />
+                  Despesas por Categoria
+                </CardTitle>
+                <CardDescription>Distribuição dos gastos</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {categoryTotals.length > 0 ? (
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={categoryTotals}
+                          dataKey="amount"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={100}
+                          label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                        >
+                          {categoryTotals.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          formatter={(value: number) => formatCurrencyValue(value)}
+                          contentStyle={{
+                            backgroundColor: 'hsl(var(--card))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px',
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <p className="text-center text-muted-foreground py-8">
+                    Nenhuma despesa encontrada no período
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </PremiumOverlay>
+
+          {/* Income Categories */}
+          <PremiumOverlay 
+            isLocked={!hasAdvancedReports} 
+            message="Gráficos detalhados são um recurso Premium"
+            onUpgrade={() => setUpgradeModalOpen(true)}
+          >
+            <Card className="animate-slide-up" style={{ animationDelay: "0.7s" }}>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <PieChart className="h-5 w-5 text-success" />
+                  Receitas por Categoria
+                </CardTitle>
+                <CardDescription>Distribuição das receitas</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {incomeCategoryTotals.length > 0 ? (
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={incomeCategoryTotals}
+                          dataKey="amount"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={100}
+                          label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                        >
+                          {incomeCategoryTotals.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          formatter={(value: number) => formatCurrencyValue(value)}
+                          contentStyle={{
+                            backgroundColor: 'hsl(var(--card))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px',
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <p className="text-center text-muted-foreground py-8">
+                    Nenhuma receita encontrada no período
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </PremiumOverlay>
+        </div>
+
+        {/* Category List */}
+        <Card className="animate-slide-up" style={{ animationDelay: "0.8s" }}>
           <CardHeader>
-            <CardTitle>Top Categorias de Despesa</CardTitle>
-            <CardDescription>Ranking das maiores categorias de gasto</CardDescription>
+            <CardTitle>Detalhamento por Categoria</CardTitle>
+            <CardDescription>Ranking de despesas do período</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {categoryTotals.slice(0, 5).map((cat, index) => (
+              {categoryTotals.map((cat) => (
                 <div key={cat.category_id} className="flex items-center gap-4">
-                  <span className="text-2xl font-bold text-muted-foreground w-8">{index + 1}</span>
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: cat.color }}
-                  />
-                  <div className="flex-1">
-                    <p className="font-medium">{cat.emoji} {cat.name}</p>
-                    <div className="w-full bg-muted rounded-full h-2 mt-1">
-                      <div
-                        className="h-2 rounded-full"
-                        style={{
-                          width: `${(cat.amount / totalExpenses) * 100}%`,
-                          backgroundColor: cat.color
-                        }}
-                      />
+                  <div className="flex items-center gap-3 flex-1">
+                    <div 
+                      className="w-10 h-10 rounded-lg flex items-center justify-center text-lg"
+                      style={{ backgroundColor: cat.color + '20', color: cat.color }}
+                    >
+                      {cat.emoji}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium">{cat.name}</p>
+                      <div className="w-full bg-secondary rounded-full h-2 mt-1">
+                        <div 
+                          className="h-2 rounded-full transition-all duration-500"
+                          style={{
+                            width: `${(cat.amount / totalExpenses) * 100}%`,
+                            backgroundColor: cat.color
+                          }}
+                        />
+                      </div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold">{formatCurrency(cat.amount)}</p>
+                    <p className="font-bold">{formatCurrencyValue(cat.amount)}</p>
                     <p className="text-xs text-muted-foreground">
                       {((cat.amount / totalExpenses) * 100).toFixed(1)}%
                     </p>
