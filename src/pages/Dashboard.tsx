@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowUpRight, ArrowDownRight, Wallet, CreditCard, TrendingUp, LogOut, Calendar, Settings } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Wallet, CreditCard, TrendingUp, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { TransactionDialog } from "@/components/TransactionDialog";
@@ -12,10 +12,8 @@ import { GoalsWidget } from "@/components/GoalsWidget";
 import { PieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 import { ChartContainer, ChartTooltipContent, ChartLegend, ChartLegendContent, ChartConfig } from "@/components/ui/chart";
 import { startOfMonth, endOfMonth } from "date-fns";
-import DynamicBackground from "@/components/DynamicBackground";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { NotificationCenter } from "@/components/NotificationCenter";
-import { DashboardNav } from "@/components/DashboardNav";
 import { PendingReviewBadge } from "@/components/PendingReviewBadge";
 import { useDashboard, PeriodFilter } from "@/hooks/useDashboard";
 import { useQueryClient } from "@tanstack/react-query";
@@ -25,6 +23,7 @@ import { usePlan } from "@/hooks/usePlan";
 import { UpgradeBanner } from "@/components/UpgradeBanner";
 import { TrialBanner } from "@/components/TrialBanner";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
+import { DashboardLayout } from "@/components/DashboardLayout";
 import { toast } from "sonner";
 
 const Dashboard = () => {
@@ -79,20 +78,15 @@ const Dashboard = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-secondary/20">
-        <header className="bg-gradient-primary text-primary-foreground py-6 shadow-lg">
-          <div className="container mx-auto px-4">
-            <Skeleton className="h-8 w-48" />
-          </div>
-        </header>
-        <div className="container mx-auto px-4 py-8">
+      <DashboardLayout onNewTransaction={() => setDialogOpen(true)} onSignOut={handleSignOut}>
+        <div className="p-6">
           <div className="grid md:grid-cols-3 gap-6 mb-8">
-            <Skeleton className="h-32 bg-transparent" />
+            <Skeleton className="h-32" />
             <Skeleton className="h-32" />
             <Skeleton className="h-32" />
           </div>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
@@ -104,45 +98,24 @@ const Dashboard = () => {
   const { userName, balance, income, expenses, categoryTotals, dailyTotals } = data!;
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      <DynamicBackground />
-
-      <div className="relative z-10">
-        <header className="backdrop-blur-lg py-4 md:py-6 shadow-lg bg-card border-b border-border">
-          <div className="container mx-auto px-4">
-            <div className="flex items-center justify-between gap-4">
-              <div className="min-w-0">
-                <h1 className="text-xl md:text-2xl font-bold text-foreground truncate">FinanceFlow</h1>
-                <p className="text-sm text-primary truncate">Olá, {userName}! 👋</p>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <PendingReviewBadge />
-                
-                <DashboardNav 
-                  onNewTransaction={() => setDialogOpen(true)} 
-                  onSignOut={handleSignOut} 
-                />
-                
-                <NotificationCenter />
-                <ThemeToggle />
-                
-                {/* Desktop only settings/logout */}
-                <div className="hidden lg:flex items-center gap-1">
-                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground hover:bg-muted" onClick={() => navigate("/settings")} title="Configurações">
-                    <Settings className="w-5 h-5" />
-                  </Button>
-                  
-                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground hover:bg-muted" onClick={handleSignOut} title="Sair">
-                    <LogOut className="w-5 h-5" />
-                  </Button>
-                </div>
-              </div>
-            </div>
+    <DashboardLayout onNewTransaction={() => setDialogOpen(true)} onSignOut={handleSignOut}>
+      {/* Compact Header */}
+      <header className="sticky top-0 z-20 backdrop-blur-lg bg-background/80 border-b border-border px-6 py-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-foreground">Olá, {userName}! 👋</h1>
+            <p className="text-sm text-muted-foreground">{getPeriodLabel()}</p>
           </div>
-        </header>
+          
+          <div className="flex items-center gap-2">
+            <PendingReviewBadge />
+            <NotificationCenter />
+            <ThemeToggle />
+          </div>
+        </div>
+      </header>
 
-        <div className="container mx-auto px-4 py-8">
+      <div className="p-6">
           {/* Trial Banner for users on trial */}
           {isOnTrial && trialEndsAt && trialDaysRemaining !== null && (
             <TrialBanner 
@@ -352,8 +325,7 @@ const Dashboard = () => {
         
         {/* Onboarding for trial users */}
         <OnboardingFlow isOnTrial={isOnTrial} trialDaysRemaining={trialDaysRemaining} />
-      </div>
-    </div>
+    </DashboardLayout>
   );
 };
 
