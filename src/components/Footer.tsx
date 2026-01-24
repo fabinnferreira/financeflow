@@ -43,7 +43,7 @@ const Footer = () => {
 
         <div className="border-t border-primary-foreground/20 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-primary-foreground/80">
-            © 2024 FinanceFlow. Todos os direitos reservados.
+            © {new Date().getFullYear()} FinanceFlow. Todos os direitos reservados.
           </p>
           
           <p className="text-sm text-primary-foreground/80 flex items-center gap-1">

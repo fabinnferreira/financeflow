@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { recalculateAccountBalance } from "@/lib/accountBalance";
 
 const PAGE_SIZE = 20;
 
@@ -93,40 +94,6 @@ async function deleteTransaction(id: number) {
   await recalculateAccountBalance(transaction.account_id);
   
   return { success: true };
-}
-
-// Recalculate account balance
-export async function recalculateAccountBalance(accountId: number) {
-  const user = await getCurrentUser();
-  
-  // Get all transactions for this account
-  const { data: transactions, error } = await supabase
-    .from("transactions")
-    .select("type, amount_cents")
-    .eq("account_id", accountId)
-    .eq("user_id", user.id);
-
-  if (error) throw error;
-
-  // Calculate balance (income adds, expense subtracts)
-  let balanceCents = 0;
-  transactions?.forEach(t => {
-    if (t.type === "income") {
-      balanceCents += t.amount_cents;
-    } else {
-      balanceCents -= t.amount_cents;
-    }
-  });
-
-  // Update account balance
-  const { error: updateError } = await supabase
-    .from("accounts")
-    .update({ balance_cents: balanceCents })
-    .eq("id", accountId);
-
-  if (updateError) throw updateError;
-  
-  return balanceCents;
 }
 
 // Count pending review transactions

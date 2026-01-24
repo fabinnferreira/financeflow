@@ -1,4 +1,5 @@
 import * as XLSX from "xlsx";
+import { formatCurrencyValue } from "@/lib/formatters";
 
 interface Transaction {
   id: number;
@@ -34,9 +35,9 @@ export const exportTransactionsToExcel = (
     ["Gerado em", new Date().toLocaleDateString("pt-BR")],
     [""],
     ["Resumo Financeiro"],
-    ["Receitas", formatCurrency(summary.totalIncome)],
-    ["Despesas", formatCurrency(summary.totalExpenses)],
-    ["Saldo", formatCurrency(summary.balance)],
+    ["Receitas", formatCurrencyValue(summary.totalIncome)],
+    ["Despesas", formatCurrencyValue(summary.totalExpenses)],
+    ["Saldo", formatCurrencyValue(summary.balance)],
     [""],
     ["Total de Transações", transactions.length],
   ];
@@ -115,11 +116,4 @@ export const exportTransactionsToExcel = (
 
   // Save file
   XLSX.writeFile(workbook, `${fileName}.xlsx`);
-};
-
-const formatCurrency = (value: number): string => {
-  return `R$ ${value.toLocaleString("pt-BR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
 };

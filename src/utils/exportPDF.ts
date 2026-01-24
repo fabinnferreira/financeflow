@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { formatCurrencyRaw } from "@/lib/formatters";
 
 interface Transaction {
   id: number;
@@ -45,14 +46,14 @@ export const exportTransactionsToPDF = (
   
   doc.setFontSize(11);
   doc.setTextColor(16, 185, 129); // Green
-  doc.text(`Receitas: R$ ${formatCurrency(summary.totalIncome)}`, 14, 65);
+  doc.text(`Receitas: R$ ${formatCurrencyRaw(summary.totalIncome)}`, 14, 65);
   
   doc.setTextColor(239, 68, 68); // Red
-  doc.text(`Despesas: R$ ${formatCurrency(summary.totalExpenses)}`, 14, 72);
+  doc.text(`Despesas: R$ ${formatCurrencyRaw(summary.totalExpenses)}`, 14, 72);
   
   const balanceColor = summary.balance >= 0 ? [16, 185, 129] : [239, 68, 68];
   doc.setTextColor(balanceColor[0], balanceColor[1], balanceColor[2]);
-  doc.text(`Saldo: R$ ${formatCurrency(summary.balance)}`, 14, 79);
+  doc.text(`Saldo: R$ ${formatCurrencyRaw(summary.balance)}`, 14, 79);
 
   // Transactions Table
   doc.setFontSize(14);
@@ -63,7 +64,7 @@ export const exportTransactionsToPDF = (
     t.type === "income" ? "↑ Receita" : "↓ Despesa",
     t.description,
     `${t.categories.emoji} ${t.categories.name}`,
-    `R$ ${formatCurrency(t.amount_cents / 100)}`,
+    `R$ ${formatCurrencyRaw(t.amount_cents / 100)}`,
     new Date(t.date).toLocaleDateString("pt-BR"),
   ]);
 
@@ -108,11 +109,4 @@ export const exportTransactionsToPDF = (
   }
 
   doc.save(`${fileName}.pdf`);
-};
-
-const formatCurrency = (value: number): string => {
-  return value.toLocaleString("pt-BR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
 };
