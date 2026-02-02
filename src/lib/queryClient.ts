@@ -76,14 +76,26 @@ export const queryKeys = {
 export const invalidateAfterTransaction = (qc: QueryClient) => {
   qc.invalidateQueries({ queryKey: queryKeys.dashboard("month") });
   qc.invalidateQueries({ queryKey: queryKeys.transactions.all });
+  qc.invalidateQueries({ queryKey: ["transactions-infinite"] });
   qc.invalidateQueries({ queryKey: queryKeys.accounts.all });
 };
 
 export const invalidateAfterAccountChange = (qc: QueryClient) => {
   qc.invalidateQueries({ queryKey: queryKeys.accounts.all });
   qc.invalidateQueries({ queryKey: queryKeys.dashboard("month") });
+  qc.invalidateQueries({ queryKey: queryKeys.transactions.all });
 };
 
 export const invalidateAfterGoalChange = (qc: QueryClient) => {
   qc.invalidateQueries({ queryKey: queryKeys.goals.all });
+  qc.invalidateQueries({ queryKey: queryKeys.goals.widget });
+};
+
+export const invalidateAfterCategoryChange = (qc: QueryClient) => {
+  qc.invalidateQueries({ queryKey: queryKeys.categories.all });
+};
+
+export const invalidateUserPlan = (qc: QueryClient) => {
+  qc.invalidateQueries({ queryKey: queryKeys.user.plan });
+  qc.invalidateQueries({ queryKey: queryKeys.user.usage });
 };

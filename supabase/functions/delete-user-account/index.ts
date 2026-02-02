@@ -109,7 +109,15 @@ serve(async (req) => {
     if (rolesError) console.error('Error deleting user roles:', rolesError);
     else console.log('[DeleteAccount] User roles deleted');
 
-    // 10. Delete profile
+    // 10. Delete user usage
+    const { error: usageError } = await supabaseAdmin
+      .from('user_usage')
+      .delete()
+      .eq('user_id', userId);
+    if (usageError) console.error('Error deleting user usage:', usageError);
+    else console.log('[DeleteAccount] User usage deleted');
+
+    // 11. Delete profile
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
       .delete()

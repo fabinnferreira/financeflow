@@ -1,28 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { transactionSchema } from "@/lib/validations";
 import { recalculateAccountBalance } from "@/lib/accountBalance";
 import { useQueryClient } from "@tanstack/react-query";
-
-interface Account {
-  id: number;
-  name: string;
-  type: string;
-}
-
-interface Category {
-  id: number;
-  name: string;
-  emoji: string;
-  type: string;
-}
+import { useAccounts } from "@/hooks/useAccounts";
+import { useCategories } from "@/hooks/useCategories";
+import { supabase } from "@/integrations/supabase/client";
+import { invalidateAfterTransaction } from "@/lib/queryClient";
 
 interface Transaction {
   id: number;
@@ -44,8 +34,6 @@ interface EditTransactionDialogProps {
 export function EditTransactionDialog({ open, onOpenChange, onSuccess, transaction }: EditTransactionDialogProps) {
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [formData, setFormData] = useState({
     type: "expense",
     description: "",
@@ -54,6 +42,15 @@ export function EditTransactionDialog({ open, onOpenChange, onSuccess, transacti
     category_id: "",
     date: new Date().toISOString().split('T')[0],
   });
+
+  // Use React Query hooks for consistent cache
+  const { data: accountsData = [] } = useAccounts();
+  const { data: categoriesData = [] } = useCategories(formData.type);
+
+  // Filter categories based on form type
+  const filteredCategories = useMemo(() => {
+    return categoriesData.filter(c => c.type === formData.type);
+  }, [categoriesData, formData.type]);
 
   useEffect(() => {
     if (open && transaction) {
@@ -65,51 +62,15 @@ export function EditTransactionDialog({ open, onOpenChange, onSuccess, transacti
         category_id: transaction.category_id.toString(),
         date: new Date(transaction.date).toISOString().split('T')[0],
       });
-      loadAccounts();
-      loadCategories(transaction.type);
     }
   }, [open, transaction]);
 
+  // Reset category when type changes
   useEffect(() => {
-    if (open) {
-      loadCategories(formData.type);
+    if (open && formData.type !== transaction?.type) {
+      setFormData(prev => ({ ...prev, category_id: "" }));
     }
-  }, [formData.type]);
-
-  const loadAccounts = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data, error } = await supabase
-      .from("accounts")
-      .select("id, name, type")
-      .eq("user_id", user.id);
-
-    if (error) {
-      console.error("Error loading accounts:", error);
-      return;
-    }
-
-    setAccounts(data || []);
-  };
-
-  const loadCategories = async (type: string) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data, error } = await supabase
-      .from("categories")
-      .select("id, name, emoji, type")
-      .eq("user_id", user.id)
-      .eq("type", type);
-
-    if (error) {
-      console.error("Error loading categories:", error);
-      return;
-    }
-
-    setCategories(data || []);
-  };
+  }, [formData.type, open, transaction?.type]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -151,10 +112,8 @@ export function EditTransactionDialog({ open, onOpenChange, onSuccess, transacti
         await recalculateAccountBalance(oldAccountId);
       }
 
-      // Invalidate queries
-      queryClient.invalidateQueries({ queryKey: ["transactions-infinite"] });
-      queryClient.invalidateQueries({ queryKey: ["accounts"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      // Use centralized invalidation helper
+      invalidateAfterTransaction(queryClient);
       queryClient.invalidateQueries({ queryKey: ["pending-review-count"] });
 
       toast.success("Transação atualizada com sucesso!");
@@ -239,7 +198,7 @@ export function EditTransactionDialog({ open, onOpenChange, onSuccess, transacti
                 <SelectValue placeholder="Selecione uma conta" />
               </SelectTrigger>
               <SelectContent>
-                {accounts.map((account) => (
+                {accountsData.map((account) => (
                   <SelectItem key={account.id} value={account.id.toString()}>
                     {account.name} ({account.type})
                   </SelectItem>
@@ -258,7 +217,7 @@ export function EditTransactionDialog({ open, onOpenChange, onSuccess, transacti
                 <SelectValue placeholder="Selecione uma categoria" />
               </SelectTrigger>
               <SelectContent>
-                {categories.map((category) => (
+                {filteredCategories.map((category) => (
                   <SelectItem key={category.id} value={category.id.toString()}>
                     {category.emoji} {category.name}
                   </SelectItem>

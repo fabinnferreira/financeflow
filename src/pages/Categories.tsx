@@ -458,9 +458,10 @@ const Categories = () => {
                   </p>
                   <Button
                     variant="outline"
-                    onClick={() => setDialogOpen(true)}
+                    onClick={handleNewCategory}
                     className="gap-2"
                   >
+                    {!canCreate && <Lock className="w-4 h-4" />}
                     <PlusCircle className="w-4 h-4" />
                     Criar primeira categoria
                   </Button>
@@ -484,9 +485,10 @@ const Categories = () => {
                   </p>
                   <Button
                     variant="outline"
-                    onClick={() => setDialogOpen(true)}
+                    onClick={handleNewCategory}
                     className="gap-2"
                   >
+                    {!canCreate && <Lock className="w-4 h-4" />}
                     <PlusCircle className="w-4 h-4" />
                     Criar primeira categoria
                   </Button>
