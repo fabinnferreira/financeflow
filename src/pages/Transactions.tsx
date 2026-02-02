@@ -110,9 +110,12 @@ export default function Transactions() {
       const transactionDate = parseISO(t.date);
       const matchesDate = isWithinInterval(transactionDate, { start: startDate, end: endDate });
 
-      return matchesSearch && matchesCategory && matchesDate;
+      // Apply minDate filter for free users (BUG-4 fix)
+      const matchesMinDate = !minDate || transactionDate >= minDate;
+
+      return matchesSearch && matchesCategory && matchesDate && matchesMinDate;
     });
-  }, [transactions, searchTerm, selectedCategory, startDate, endDate]);
+  }, [transactions, searchTerm, selectedCategory, startDate, endDate, minDate]);
 
   const filterByType = (type?: string) => {
     if (!type) return filteredTransactions;
