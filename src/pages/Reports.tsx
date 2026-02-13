@@ -62,67 +62,69 @@ const Reports = () => {
       }
 
       const months = parseInt(monthsToShow);
-      const monthlyResults: MonthlyData[] = [];
+      const periodStart = startOfMonth(subMonths(new Date(), months - 1)).toISOString();
+      const periodEnd = endOfMonth(new Date()).toISOString();
 
-      // Fetch data for each month
+      // Fetch ALL data in parallel: one transaction query + category totals + income categories
+      const [allTransactionsResult, expenseCategoriesResult, incomeCategoriesResult] = await Promise.all([
+        supabase
+          .from("transactions")
+          .select("type, amount_cents, date")
+          .eq("user_id", user.id)
+          .gte("date", periodStart)
+          .lte("date", periodEnd),
+        supabase.rpc('get_category_totals' as any, {
+          start_date: periodStart,
+          end_date: periodEnd,
+        }) as any,
+        supabase
+          .from("transactions")
+          .select("amount_cents, categories(id, name, emoji, color)")
+          .eq("user_id", user.id)
+          .eq("type", "income")
+          .gte("date", periodStart)
+          .lte("date", periodEnd),
+      ]);
+
+      // Aggregate monthly data client-side from the single query
+      const monthlyResults: MonthlyData[] = [];
       for (let i = months - 1; i >= 0; i--) {
         const monthDate = subMonths(new Date(), i);
-        const startDate = startOfMonth(monthDate).toISOString();
-        const endDate = endOfMonth(monthDate).toISOString();
-
-        const { data: transactions } = await supabase
-          .from("transactions")
-          .select("type, amount_cents")
-          .eq("user_id", user.id)
-          .gte("date", startDate)
-          .lte("date", endDate);
+        const mStart = startOfMonth(monthDate);
+        const mEnd = endOfMonth(monthDate);
 
         let income = 0;
         let expense = 0;
-        transactions?.forEach(t => {
-          if (t.type === "income") income += t.amount_cents / 100;
-          else expense += t.amount_cents / 100;
+        allTransactionsResult.data?.forEach(t => {
+          const tDate = new Date(t.date);
+          if (tDate >= mStart && tDate <= mEnd) {
+            if (t.type === "income") income += t.amount_cents / 100;
+            else expense += t.amount_cents / 100;
+          }
         });
 
         monthlyResults.push({
           month: format(monthDate, "MMM/yy", { locale: ptBR }),
           income,
           expense,
-          balance: income - expense
+          balance: income - expense,
         });
       }
-
       setMonthlyData(monthlyResults);
 
-      // Fetch category totals for the entire period
-      const periodStart = startOfMonth(subMonths(new Date(), parseInt(monthsToShow) - 1)).toISOString();
-      const periodEnd = endOfMonth(new Date()).toISOString();
-
       // Expense categories
-      const { data: expenseCategories } = await supabase.rpc('get_category_totals' as any, {
-        start_date: periodStart,
-        end_date: periodEnd
-      }) as any;
-
-      if (expenseCategories) {
-        const chartData = expenseCategories.map((item: any) => ({
-          ...item,
-          amount: item.total_amount_cents / 100
-        }));
-        setCategoryTotals(chartData);
+      if (expenseCategoriesResult.data) {
+        setCategoryTotals(
+          expenseCategoriesResult.data.map((item: any) => ({
+            ...item,
+            amount: item.total_amount_cents / 100,
+          }))
+        );
       }
 
-      // Income categories - manual aggregation
-      const { data: incomeTransactions } = await supabase
-        .from("transactions")
-        .select("amount_cents, categories(id, name, emoji, color)")
-        .eq("user_id", user.id)
-        .eq("type", "income")
-        .gte("date", periodStart)
-        .lte("date", periodEnd);
-
-      if (incomeTransactions) {
-        const incomeByCategory = incomeTransactions.reduce((acc: any, t: any) => {
+      // Income categories
+      if (incomeCategoriesResult.data) {
+        const incomeByCategory = incomeCategoriesResult.data.reduce((acc: any, t: any) => {
           const catId = t.categories.id;
           if (!acc[catId]) {
             acc[catId] = {
@@ -130,7 +132,7 @@ const Reports = () => {
               name: t.categories.name,
               emoji: t.categories.emoji,
               color: t.categories.color || "#10b981",
-              amount: 0
+              amount: 0,
             };
           }
           acc[catId].amount += t.amount_cents / 100;
