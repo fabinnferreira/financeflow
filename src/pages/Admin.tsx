@@ -91,55 +91,33 @@ export default function Admin() {
 
   async function loadStats() {
     try {
-      // Get total connections
-      const { count: totalConnections } = await supabase
-        .from("bank_connections")
-        .select("*", { count: "exact", head: true });
-
-      // Get active connections
-      const { count: activeConnections } = await supabase
-        .from("bank_connections")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "CONNECTED");
-
-      // Get failed connections
-      const { count: failedConnections } = await supabase
-        .from("bank_connections")
-        .select("*", { count: "exact", head: true })
-        .neq("status", "CONNECTED");
-
-      // Get total transactions
-      const { count: totalTransactions } = await supabase
-        .from("transactions")
-        .select("*", { count: "exact", head: true });
-
-      // Get pending review transactions
-      const { count: pendingReviewTransactions } = await supabase
-        .from("transactions")
-        .select("*", { count: "exact", head: true })
-        .eq("needs_review", true);
-
-      // Get total users
-      const { count: totalUsers } = await supabase
-        .from("profiles")
-        .select("*", { count: "exact", head: true });
-
-      // Get last sync time
-      const { data: lastSync } = await supabase
-        .from("bank_connections")
-        .select("last_sync_at")
-        .order("last_sync_at", { ascending: false })
-        .limit(1)
-        .single();
+      // Run all count queries in parallel instead of sequentially
+      const [
+        connectionsResult,
+        activeResult,
+        failedResult,
+        transactionsResult,
+        pendingResult,
+        usersResult,
+        lastSyncResult,
+      ] = await Promise.all([
+        supabase.from("bank_connections").select("*", { count: "exact", head: true }),
+        supabase.from("bank_connections").select("*", { count: "exact", head: true }).eq("status", "CONNECTED"),
+        supabase.from("bank_connections").select("*", { count: "exact", head: true }).neq("status", "CONNECTED"),
+        supabase.from("transactions").select("*", { count: "exact", head: true }),
+        supabase.from("transactions").select("*", { count: "exact", head: true }).eq("needs_review", true),
+        supabase.from("profiles").select("*", { count: "exact", head: true }),
+        supabase.from("bank_connections").select("last_sync_at").order("last_sync_at", { ascending: false }).limit(1).single(),
+      ]);
 
       setStats({
-        totalConnections: totalConnections || 0,
-        activeConnections: activeConnections || 0,
-        failedConnections: failedConnections || 0,
-        totalTransactions: totalTransactions || 0,
-        pendingReviewTransactions: pendingReviewTransactions || 0,
-        totalUsers: totalUsers || 0,
-        lastSyncAt: lastSync?.last_sync_at || null,
+        totalConnections: connectionsResult.count || 0,
+        activeConnections: activeResult.count || 0,
+        failedConnections: failedResult.count || 0,
+        totalTransactions: transactionsResult.count || 0,
+        pendingReviewTransactions: pendingResult.count || 0,
+        totalUsers: usersResult.count || 0,
+        lastSyncAt: lastSyncResult.data?.last_sync_at || null,
       });
     } catch (error) {
       console.error("Error loading stats:", error);
